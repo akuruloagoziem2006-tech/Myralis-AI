@@ -18,7 +18,12 @@ import ChatTags from './components/ChatTags';
 import EditMessage from './components/EditMessage';
 import ResponseSpeed from './components/ResponseSpeed';
 import ThemeSwitcher from './components/ThemeSwitcher';
+import PWAInstaller from './components/PWAInstaller';
+import VoiceOutput from './components/VoiceOutput';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
+import ShareButton from './components/ShareButton';
 import { themes } from './themes';
+import { languages, getTranslation } from './languages';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -29,6 +34,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
   const [currentTheme, setCurrentTheme] = useState('dark');
+  const [currentLanguage, setCurrentLanguage] = useState('en');
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -40,16 +46,20 @@ export default function Home() {
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [selectedTag, setSelectedTag] = useState(null);
   const [filteredMessages, setFilteredMessages] = useState([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  const t = (key) => getTranslation(currentLanguage, key);
 
   // Load saved data
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
     const savedTheme = localStorage.getItem("myralis_theme");
+    const savedLanguage = localStorage.getItem("myralis_language");
     const savedPrompt = localStorage.getItem("myralis_systemPrompt");
     const savedPinned = localStorage.getItem("myralis_pinned");
 
@@ -61,7 +71,7 @@ export default function Home() {
     } else {
       const welcome = [{ 
         role: "assistant", 
-        content: "Hello! I'm **Myralis AI**. How can I help you today?",
+        content: t('welcome'),
         timestamp: Date.now()
       }];
       setMessages(welcome);
@@ -76,6 +86,10 @@ export default function Home() {
       setCurrentTheme(savedTheme);
     }
 
+    if (savedLanguage) {
+      setCurrentLanguage(savedLanguage);
+    }
+
     if (savedPrompt) {
       setSystemPrompt(savedPrompt);
       setTempPrompt(savedPrompt);
@@ -88,7 +102,7 @@ export default function Home() {
     if (savedPinned) {
       setPinnedMessages(JSON.parse(savedPinned));
     }
-  }, []);
+  }, [t]);
 
   // Save messages
   useEffect(() => {
@@ -101,6 +115,10 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("myralis_theme", currentTheme);
   }, [currentTheme]);
+
+  useEffect(() => {
+    localStorage.setItem("myralis_language", currentLanguage);
+  }, [currentLanguage]);
 
   useEffect(() => {
     localStorage.setItem("myralis_systemPrompt", systemPrompt);
@@ -159,7 +177,7 @@ export default function Home() {
     if (confirm("Are you sure you want to clear all messages?")) {
       const welcome = [{ 
         role: "assistant", 
-        content: "Hello! I'm **Myralis AI**. How can I help you today?",
+        content: t('welcome'),
         timestamp: Date.now()
       }];
       setMessages(welcome);
@@ -253,6 +271,7 @@ export default function Home() {
       version: "2.0",
       systemPrompt: systemPrompt,
       theme: currentTheme,
+      language: currentLanguage,
       pinnedMessages: pinnedMessages,
       messages: messages.map(msg => ({
         role: msg.role,
@@ -345,12 +364,18 @@ export default function Home() {
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported. Try Chrome.");
+      alert(t('error') + " Speech recognition not supported");
       return;
     }
     window.speechSynthesis.cancel();
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
+    recognition.lang = currentLanguage === 'en' ? 'en-US' : 
+                       currentLanguage === 'es' ? 'es-ES' :
+                       currentLanguage === 'zh' ? 'zh-CN' :
+                       currentLanguage === 'hi' ? 'hi-IN' :
+                       currentLanguage === 'fr' ? 'fr-FR' :
+                       currentLanguage === 'ja' ? 'ja-JP' :
+                       currentLanguage === 'de' ? 'de-DE' : 'en-US';
     recognition.interimResults = false;
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
@@ -405,7 +430,7 @@ export default function Home() {
 
       const assistantMsg = {
         role: "assistant",
-        content: data.reply || "Sorry, I couldn't process that.",
+        content: data.reply || t('error') + " Could not process.",
         timestamp: Date.now(),
         pinned: false
       };
@@ -413,7 +438,7 @@ export default function Home() {
       if (data.error) {
         setMessages(prev => [...prev, { 
           role: "assistant", 
-          content: "Error: " + data.error,
+          content: t('error') + data.error,
           timestamp: Date.now()
         }]);
       } else {
@@ -426,7 +451,7 @@ export default function Home() {
     } catch (err) {
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: "Connection error. Please try again.",
+        content: t('connectionError'),
         timestamp: Date.now()
       }]);
     }
@@ -445,11 +470,11 @@ export default function Home() {
   }
 
   const suggestions = [
-    "What can you help me with?",
-    "Tell me a fun fact",
-    "Explain AI in simple terms",
-    "What's the weather like?",
-    "Help me with my code"
+    t('summarize'),
+    t('brainstorm'),
+    t('explain'),
+    t('teach'),
+    "What can you help me with?"
   ];
 
   const displayedMessages = isSearching && searchResults.length > 0 ? searchResults : 
@@ -470,30 +495,48 @@ export default function Home() {
         <div style={styles.headerActions}>
           <ResponseSpeed messages={messages} />
           <button onClick={() => setShowExportOptions(!showExportOptions)} style={styles.headerBtn}>📤</button>
+          <button onClick={() => setShowAnalytics(!showAnalytics)} style={styles.headerBtn}>📊</button>
           <button onClick={() => setShowSettings(!showSettings)} style={styles.headerBtn}>⚙️</button>
         </div>
       </header>
 
+      <PWAInstaller />
+
+      <div style={styles.languageBar}>
+        <select 
+          value={currentLanguage} 
+          onChange={(e) => setCurrentLanguage(e.target.value)}
+          style={{ ...styles.languageSelect, background: theme.inputBg, borderColor: theme.borderColor, color: theme.color }}
+        >
+          {Object.entries(languages).map(([code, lang]) => (
+            <option key={code} value={code}>
+              {lang.emoji} {lang.name}
+            </option>
+          ))}
+        </select>
+        <VoiceOutput text={messages[messages.length - 1]?.content || ''} autoSpeak={autoSpeak} language={currentLanguage} />
+      </div>
+
       {showSettings && (
         <div style={{ ...styles.settingsPanel, background: theme.settingsBg, borderColor: theme.borderColor }}>
           <label style={styles.settingItem}>
-            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} /> Auto Speak
+            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} /> {t('autoSpeak')}
           </label>
           <ThemeSwitcher 
             currentTheme={currentTheme} 
             onThemeChange={(theme) => setCurrentTheme(theme)} 
           />
-          <button onClick={togglePromptEditor} style={styles.promptBtn}>✏️ Edit System Prompt</button>
-          <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
+          <button onClick={togglePromptEditor} style={styles.promptBtn}>✏️ {t('editPrompt')}</button>
+          <button onClick={clearChat} style={styles.clearBtn}>{t('clearChat')}</button>
         </div>
       )}
 
       {showPromptEditor && (
         <div style={{ ...styles.promptEditor, background: theme.settingsBg, borderColor: theme.borderColor }}>
           <div style={styles.promptEditorHeader}>
-            <h4 style={styles.promptEditorTitle}>System Prompt</h4>
+            <h4 style={styles.promptEditorTitle}>{t('systemPrompt')}</h4>
             <div style={styles.promptEditorActions}>
-              <button onClick={resetSystemPrompt} style={styles.resetPromptBtn}>Reset Default</button>
+              <button onClick={resetSystemPrompt} style={styles.resetPromptBtn}>{t('resetPrompt')}</button>
               <button onClick={() => setShowPromptEditor(false)} style={styles.closePromptBtn}>✕</button>
             </div>
           </div>
@@ -507,23 +550,28 @@ export default function Home() {
           />
           <div style={styles.promptEditorFooter}>
             <span style={styles.promptCharCount}>{tempPrompt.length} characters</span>
-            <button onClick={saveSystemPrompt} style={styles.savePromptBtn}>💾 Save Prompt</button>
+            <button onClick={saveSystemPrompt} style={styles.savePromptBtn}>💾 {t('savePrompt')}</button>
           </div>
         </div>
       )}
 
       {showExportOptions && (
         <div style={{ ...styles.exportPanel, background: theme.settingsBg, borderColor: theme.borderColor }}>
-          <div style={styles.exportTitle}>Export Chat As:</div>
+          <div style={styles.exportTitle}>{t('chatExport')}:</div>
           <div style={styles.exportButtons}>
             <button onClick={exportAsText} style={styles.exportBtn}>📄 Text</button>
             <button onClick={exportAsJSON} style={styles.exportBtn}>📊 JSON</button>
             <button onClick={exportAsMarkdown} style={styles.exportBtn}>📝 Markdown</button>
             <button onClick={exportAsHTML} style={styles.exportBtn}>🌐 HTML</button>
           </div>
-          <div style={styles.exportCount}>{messages.length} messages</div>
+          <div style={styles.exportButtons}>
+            <ShareButton messages={messages} title="Myralis AI Chat" />
+          </div>
+          <div style={styles.exportCount}>{messages.length} {t('messages')}</div>
         </div>
       )}
+
+      {showAnalytics && <AnalyticsDashboard messages={messages} />}
 
       <SearchBar messages={messages} onSearch={(results) => {
         setSearchResults(results);
@@ -559,8 +607,8 @@ export default function Home() {
                 animation: 'fadeIn 0.3s ease'
               }}
             >
-              {msg.pinned && <div style={styles.pinnedBadge}>📌 Pinned</div>}
-              {msg.edited && <div style={styles.editedBadge}>✏️ Edited</div>}
+              {msg.pinned && <div style={styles.pinnedBadge}>📌 {t('pinned')}</div>}
+              {msg.edited && <div style={styles.editedBadge}>✏️ {t('edited')}</div>}
               {msg.image && (
                 <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
               )}
@@ -661,7 +709,7 @@ export default function Home() {
             localStorage.setItem('myralis_draft', e.target.value);
           }}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder={listening ? "Listening..." : "Ask Myralis anything..."}
+          placeholder={listening ? t('listening') : t('placeholder')}
           disabled={loading}
         />
 
@@ -674,7 +722,7 @@ export default function Home() {
           onClick={sendMessage} 
           disabled={loading}
         >
-          {loading ? "⏳" : "Send"}
+          {loading ? "⏳" : t('send')}
         </button>
       </div>
 
@@ -750,6 +798,23 @@ const styles = {
     fontSize: "12px",
     color: "#94a3b8",
     marginTop: "-2px"
+  },
+  languageBar: {
+    padding: "4px 20px",
+    borderBottom: "1px solid #1e293b",
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+    flexShrink: 0,
+    flexWrap: "wrap"
+  },
+  languageSelect: {
+    padding: "4px 8px",
+    borderRadius: "6px",
+    border: "1px solid",
+    fontSize: "13px",
+    background: "#1e293b",
+    cursor: "pointer"
   },
   settingsPanel: {
     padding: "12px 20px",
