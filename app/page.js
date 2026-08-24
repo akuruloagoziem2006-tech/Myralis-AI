@@ -14,6 +14,11 @@ import PinMessage from './components/PinMessage';
 import DraftSaver from './components/DraftSaver';
 import ContextMemory from './components/ContextMemory';
 import NotificationSound from './components/NotificationSound';
+import ChatTags from './components/ChatTags';
+import EditMessage from './components/EditMessage';
+import ResponseSpeed from './components/ResponseSpeed';
+import ThemeSwitcher from './components/ThemeSwitcher';
+import { themes } from './themes';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -23,7 +28,7 @@ export default function Home() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
+  const [currentTheme, setCurrentTheme] = useState('dark');
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -33,6 +38,8 @@ export default function Home() {
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [filteredMessages, setFilteredMessages] = useState([]);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -42,7 +49,7 @@ export default function Home() {
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
-    const savedDarkMode = localStorage.getItem("myralis_darkMode");
+    const savedTheme = localStorage.getItem("myralis_theme");
     const savedPrompt = localStorage.getItem("myralis_systemPrompt");
     const savedPinned = localStorage.getItem("myralis_pinned");
 
@@ -65,8 +72,8 @@ export default function Home() {
       setAutoSpeak(savedSpeak === "true");
     }
 
-    if (savedDarkMode !== null) {
-      setDarkMode(savedDarkMode === "true");
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
     }
 
     if (savedPrompt) {
@@ -92,8 +99,8 @@ export default function Home() {
 
   // Save settings
   useEffect(() => {
-    localStorage.setItem("myralis_darkMode", darkMode.toString());
-  }, [darkMode]);
+    localStorage.setItem("myralis_theme", currentTheme);
+  }, [currentTheme]);
 
   useEffect(() => {
     localStorage.setItem("myralis_systemPrompt", systemPrompt);
@@ -111,6 +118,30 @@ export default function Home() {
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Get theme
+  const theme = themes[currentTheme] || themes.dark;
+
+  // Filter messages by tag
+  useEffect(() => {
+    if (selectedTag) {
+      const keywordMap = {
+        '💻 Coding': ['code', 'programming', 'javascript', 'python', 'react', 'api', 'function', 'bug'],
+        '📚 Learning': ['learn', 'study', 'explain', 'understand', 'teach', 'education'],
+        '💡 Ideas': ['idea', 'creative', 'brainstorm', 'suggest', 'imagine'],
+        '📝 Writing': ['write', 'story', 'poem', 'draft', 'edit', 'grammar'],
+        '🤖 AI': ['ai', 'artificial', 'intelligence', 'machine learning', 'model'],
+        '🎯 Productivity': ['plan', 'organize', 'schedule', 'efficient', 'goal']
+      };
+      const keywords = keywordMap[selectedTag] || [];
+      const filtered = messages.filter(msg => 
+        keywords.some(word => msg.content.toLowerCase().includes(word))
+      );
+      setFilteredMessages(filtered);
+    } else {
+      setFilteredMessages(messages);
+    }
+  }, [selectedTag, messages]);
 
   // Speak function
   function speak(text) {
@@ -146,10 +177,6 @@ export default function Home() {
     setAutoSpeak(!autoSpeak);
   }
 
-  function toggleDarkMode() {
-    setDarkMode(!darkMode);
-  }
-
   function togglePromptEditor() {
     setShowPromptEditor(!showPromptEditor);
     setTempPrompt(systemPrompt);
@@ -169,27 +196,21 @@ export default function Home() {
     alert("✅ System prompt reset to default!");
   }
 
+  // Edit message
+  function handleEditMessage(index, newContent) {
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], content: newContent, edited: true };
+      return updated;
+    });
+  }
+
   // Pin message handler
   function handlePinMessage(message, isPinned) {
     if (isPinned) {
       setPinnedMessages(prev => [...prev, message]);
-      // Move pinned message to top in display
-      setMessages(prev => {
-        const msgIndex = prev.indexOf(message);
-        const updated = [...prev];
-        updated.splice(msgIndex, 1);
-        updated.unshift({ ...message, pinned: true });
-        return updated;
-      });
     } else {
       setPinnedMessages(prev => prev.filter(m => m !== message));
-      setMessages(prev => {
-        const msgIndex = prev.indexOf(message);
-        const updated = [...prev];
-        updated.splice(msgIndex, 1);
-        updated.push({ ...message, pinned: false });
-        return updated;
-      });
     }
   }
 
@@ -229,15 +250,17 @@ export default function Home() {
     const data = {
       exportedAt: new Date().toISOString(),
       app: "Myralis AI",
-      version: "1.0",
+      version: "2.0",
       systemPrompt: systemPrompt,
+      theme: currentTheme,
       pinnedMessages: pinnedMessages,
       messages: messages.map(msg => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp || new Date().toISOString(),
         hasImage: !!msg.image,
-        pinned: msg.pinned || false
+        pinned: msg.pinned || false,
+        edited: msg.edited || false
       }))
     };
     const json = JSON.stringify(data, null, 2);
@@ -429,30 +452,8 @@ export default function Home() {
     "Help me with my code"
   ];
 
-  // Theme
-  const theme = darkMode ? {
-    background: "#0b0d13",
-    color: "#e4e4e7",
-    headerBg: "linear-gradient(90deg, #111827, #0f172a)",
-    borderColor: "#1e293b",
-    inputBg: "#1e293b",
-    userBg: "#1e293b",
-    botBg: "#1e1b4b",
-    botBorder: "#312e81",
-    settingsBg: "#1e293b",
-  } : {
-    background: "#f0f0f0",
-    color: "#1a1a1a",
-    headerBg: "linear-gradient(90deg, #e0e7ff, #c7d2fe)",
-    borderColor: "#d1d5db",
-    inputBg: "#ffffff",
-    userBg: "#dbeafe",
-    botBg: "#f3f4f6",
-    botBorder: "#9ca3af",
-    settingsBg: "#e5e7eb",
-  };
-
-  const displayedMessages = isSearching && searchResults.length > 0 ? searchResults : messages;
+  const displayedMessages = isSearching && searchResults.length > 0 ? searchResults : 
+                            selectedTag ? filteredMessages : messages;
 
   return (
     <div style={{ ...styles.container, background: theme.background, color: theme.color }}>
@@ -467,6 +468,7 @@ export default function Home() {
           </div>
         </div>
         <div style={styles.headerActions}>
+          <ResponseSpeed messages={messages} />
           <button onClick={() => setShowExportOptions(!showExportOptions)} style={styles.headerBtn}>📤</button>
           <button onClick={() => setShowSettings(!showSettings)} style={styles.headerBtn}>⚙️</button>
         </div>
@@ -477,9 +479,10 @@ export default function Home() {
           <label style={styles.settingItem}>
             <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} /> Auto Speak
           </label>
-          <label style={styles.settingItem}>
-            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} /> Dark Mode
-          </label>
+          <ThemeSwitcher 
+            currentTheme={currentTheme} 
+            onThemeChange={(theme) => setCurrentTheme(theme)} 
+          />
           <button onClick={togglePromptEditor} style={styles.promptBtn}>✏️ Edit System Prompt</button>
           <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
         </div>
@@ -527,6 +530,8 @@ export default function Home() {
         setIsSearching(results.length > 0);
       }} />
       
+      <ChatTags messages={messages} onFilter={(tag) => setSelectedTag(tag)} />
+      
       <div style={styles.topBar}>
         <ChatStats messages={messages} />
         <ContextMemory messages={messages} />
@@ -539,46 +544,54 @@ export default function Home() {
       />
 
       <div style={styles.chat}>
-        {displayedMessages.map((msg, i) => (
-          <div 
-            key={i} 
-            style={{
-              ...styles.message,
-              ...(msg.role === "user" ? 
-                { ...styles.user, background: theme.userBg } : 
-                { ...styles.bot, background: theme.botBg, borderColor: theme.botBorder }
-              ),
-              ...(msg.pinned ? styles.pinned : {}),
-              animation: 'fadeIn 0.3s ease'
-            }}
-          >
-            {msg.pinned && <div style={styles.pinnedBadge}>📌 Pinned</div>}
-            {msg.image && (
-              <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
-            )}
-            {msg.role === "assistant" ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-            ) : (
-              msg.content
-            )}
-            <div style={styles.messageFooter}>
-              <MessageTimestamp timestamp={msg.timestamp} />
-              <div style={styles.messageActions}>
-                <CopyMessage content={msg.content} />
-                <PinMessage 
-                  message={msg} 
-                  onPin={(pinned) => handlePinMessage(msg, pinned)}
-                />
-                {msg.role === 'assistant' && i === messages.length - 1 && (
-                  <RegenerateButton 
-                    onRegenerate={regenerateResponse} 
-                    lastMessage={msg}
+        {displayedMessages.map((msg, i) => {
+          const originalIndex = messages.indexOf(msg);
+          return (
+            <div 
+              key={i} 
+              style={{
+                ...styles.message,
+                ...(msg.role === "user" ? 
+                  { ...styles.user, background: theme.userBg } : 
+                  { ...styles.bot, background: theme.botBg, borderColor: theme.botBorder }
+                ),
+                ...(msg.pinned ? styles.pinned : {}),
+                animation: 'fadeIn 0.3s ease'
+              }}
+            >
+              {msg.pinned && <div style={styles.pinnedBadge}>📌 Pinned</div>}
+              {msg.edited && <div style={styles.editedBadge}>✏️ Edited</div>}
+              {msg.image && (
+                <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
+              )}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
+              <div style={styles.messageFooter}>
+                <MessageTimestamp timestamp={msg.timestamp} />
+                <div style={styles.messageActions}>
+                  <CopyMessage content={msg.content} />
+                  <EditMessage 
+                    message={msg} 
+                    onEdit={(newContent) => handleEditMessage(originalIndex, newContent)}
                   />
-                )}
+                  <PinMessage 
+                    message={msg} 
+                    onPin={(pinned) => handlePinMessage(msg, pinned)}
+                  />
+                  {msg.role === 'assistant' && i === messages.length - 1 && (
+                    <RegenerateButton 
+                      onRegenerate={regenerateResponse} 
+                      lastMessage={msg}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         
         {loading && (
           <div style={{ ...styles.message, ...styles.bot, opacity: 0.65, background: theme.botBg }}>
@@ -645,7 +658,6 @@ export default function Home() {
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
-            // Auto-save draft
             localStorage.setItem('myralis_draft', e.target.value);
           }}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
@@ -656,6 +668,7 @@ export default function Home() {
         <button 
           style={{
             ...styles.button,
+            background: theme.accent,
             opacity: loading ? 0.5 : 1
           }} 
           onClick={sendMessage} 
@@ -701,7 +714,8 @@ const styles = {
   },
   headerActions: {
     display: "flex",
-    gap: "8px"
+    gap: "8px",
+    alignItems: "center"
   },
   headerBtn: {
     background: "transparent",
@@ -880,7 +894,9 @@ const styles = {
     alignItems: "center",
     borderBottom: "1px solid #1e293b",
     flexShrink: 0,
-    padding: "0 20px"
+    padding: "0 20px",
+    flexWrap: "wrap",
+    gap: "4px"
   },
   chat: {
     flex: 1,
@@ -916,6 +932,12 @@ const styles = {
     color: "#fbbf24",
     fontWeight: "bold",
     marginBottom: "4px"
+  },
+  editedBadge: {
+    fontSize: "10px",
+    color: "#94a3b8",
+    marginBottom: "4px",
+    fontStyle: "italic"
   },
   messageFooter: {
     display: "flex",
@@ -993,7 +1015,6 @@ const styles = {
     transition: "border-color 0.2s"
   },
   button: {
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
     borderRadius: "14px",
     padding: "0 16px",

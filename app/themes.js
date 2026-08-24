@@ -1,0 +1,80 @@
+export const themes = {
+  dark: {
+    background: "#0b0d13",
+    color: "#e4e4e7",
+    headerBg: "linear-gradient(90deg, #111827, #0f172a)",
+    borderColor: "#1e293b",
+    inputBg: "#1e293b",
+    userBg: "#1e293b",
+    botBg: "#1e1b4b",
+    botBorder: "#312e81",
+    settingsBg: "#1e293b",
+    accent: "#6366f1",
+    accentHover: "#818cf8"
+  },
+  light: {
+    background: "#f8fafc",
+    color: "#0f172a",
+    headerBg: "linear-gradient(90deg, #e2e8f0, #f1f5f9)",
+    borderColor: "#cbd5e1",
+    inputBg: "#ffffff",
+    userBg: "#dbeafe",
+    botBg: "#f1f5f9",
+    botBorder: "#94a3b8",
+    settingsBg: "#e2e8f0",
+    accent: "#3b82f6",
+    accentHover: "#60a5fa"
+  },
+  ocean: {
+    background: "#0c1a2b",
+    color: "#b3d9ff",
+    headerBg: "linear-gradient(90deg, #0a1628, #0f2840)",
+    borderColor: "#1a3a5c",
+    inputBg: "#0f2840",
+    userBg: "#0f2840",
+    botBg: "#0a1a2f",
+    botBorder: "#1a4a7a",
+    settingsBg: "#0f2840",
+    accent: "#00b4d8",
+    accentHover: "#48cae4"
+  },
+  forest: {
+    background: "#0d1a0d",
+    color: "#b3d9b3",
+    headerBg: "linear-gradient(90deg, #0a1a0a, #0f2a0f)",
+    borderColor: "#1a3a1a",
+    inputBg: "#0f2a0f",
+    userBg: "#0f2a0f",
+    botBg: "#0a1a0a",
+    botBorder: "#2a5a2a",
+    settingsBg: "#0f2a0f",
+    accent: "#4caf50",
+    accentHover: "#66bb6a"
+  },
+  sunset: {
+    background: "#1a0d0a",
+    color: "#ffd9b3",
+    headerBg: "linear-gradient(90deg, #1a0a0a, #2a1a0f)",
+    borderColor: "#4a2a1a",
+    inputBg: "#2a1a0f",
+    userBg: "#2a1a0f",
+    botBg: "#1a0d0a",
+    botBorder: "#6a3a2a",
+    settingsBg: "#2a1a0f",
+    accent: "#f97316",
+    accentHover: "#fb923c"
+  },
+  neon: {
+    background: "#0a0a0f",
+    color: "#d4bfff",
+    headerBg: "linear-gradient(90deg, #0a0a1a, #1a0a2a)",
+    borderColor: "#3a1a5a",
+    inputBg: "#1a0a2a",
+    userBg: "#1a0a2a",
+    botBg: "#0a0a1a",
+    botBorder: "#5a2a8a",
+    settingsBg: "#1a0a2a",
+    accent: "#8b5cf6",
+    accentHover: "#a78bfa"
+  }
+};
