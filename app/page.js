@@ -12,7 +12,8 @@ export default function Home() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
-  const [darkMode, setDarkMode] = useState(true); // Added dark mode
+  const [darkMode, setDarkMode] = useState(true);
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -72,6 +73,7 @@ export default function Home() {
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowSettings(false);
+    setShowExportOptions(false);
   }
 
   function toggleSpeak() {
@@ -82,6 +84,153 @@ export default function Home() {
 
   function toggleDarkMode() {
     setDarkMode(!darkMode);
+  }
+
+  // ==================== EXPORT FUNCTIONS ====================
+  
+  function exportAsText() {
+    if (messages.length === 0) return;
+    
+    let text = "Myralis AI Chat Export\n";
+    text += "=".repeat(40) + "\n\n";
+    text += `Exported: ${new Date().toLocaleString()}\n\n`;
+    
+    messages.forEach(msg => {
+      const role = msg.role === 'user' ? '👤 You' : '🤖 Myralis';
+      text += `${role}:\n`;
+      text += `${msg.content}\n\n`;
+    });
+    
+    text += "=".repeat(40) + "\n";
+    text += "Exported from Myralis AI";
+    
+    downloadFile(text, 'chat_export.txt', 'text/plain');
+  }
+
+  function exportAsJSON() {
+    if (messages.length === 0) return;
+    
+    const data = {
+      exportedAt: new Date().toISOString(),
+      app: "Myralis AI",
+      version: "1.0",
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date().toISOString(),
+        hasImage: !!msg.image
+      }))
+    };
+    
+    const json = JSON.stringify(data, null, 2);
+    downloadFile(json, 'chat_export.json', 'application/json');
+  }
+
+  function exportAsMarkdown() {
+    if (messages.length === 0) return;
+    
+    let md = `# Myralis AI Chat Export\n\n`;
+    md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
+    md += `---\n\n`;
+    
+    messages.forEach(msg => {
+      const role = msg.role === 'user' ? '👤 **You**' : '🤖 **Myralis**';
+      md += `### ${role}\n\n`;
+      md += `${msg.content}\n\n`;
+    });
+    
+    md += `---\n\n`;
+    md += `*Exported from Myralis AI*`;
+    
+    downloadFile(md, 'chat_export.md', 'text/markdown');
+  }
+
+  function exportAsHTML() {
+    if (messages.length === 0) return;
+    
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Myralis AI Chat Export</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0b0d13;
+      color: #e4e4e7;
+    }
+    .header {
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .message {
+      padding: 12px 18px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .user {
+      background: #1e293b;
+      text-align: right;
+      border-bottom-right-radius: 4px;
+    }
+    .assistant {
+      background: #1e1b4b;
+      border-left: 3px solid #6366f1;
+      border-bottom-left-radius: 4px;
+    }
+    .role {
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #334155;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✦ Myralis AI</h1>
+    <p>Chat Export - ${new Date().toLocaleString()}</p>
+  </div>
+  ${messages.map(msg => `
+    <div class="message ${msg.role}">
+      <div class="role">${msg.role === 'user' ? '👤 You' : '🤖 Myralis'}</div>
+      <div>${msg.content}</div>
+      ${msg.image ? '<div style="margin-top:8px"><img src="' + msg.image + '" style="max-width:200px;border-radius:8px" /></div>' : ''}
+    </div>
+  `).join('')}
+  <div class="footer">
+    Exported from Myralis AI • ${new Date().toLocaleDateString()}
+  </div>
+</body>
+</html>`;
+    
+    downloadFile(html, 'chat_export.html', 'text/html');
+  }
+
+  function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowExportOptions(false);
   }
 
   function startListening() {
@@ -180,7 +329,6 @@ export default function Home() {
     "Help me with my code"
   ];
 
-  // Dynamic styles based on dark mode
   const theme = darkMode ? {
     background: "#0b0d13",
     color: "#e4e4e7",
@@ -213,9 +361,21 @@ export default function Home() {
             <div style={styles.logoSub}>AI Companion</div>
           </div>
         </div>
-        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>
-          ⚙️
-        </button>
+        <div style={styles.headerActions}>
+          <button 
+            onClick={() => setShowExportOptions(!showExportOptions)} 
+            style={styles.headerBtn}
+            title="Export Chat"
+          >
+            📤
+          </button>
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            style={styles.headerBtn}
+          >
+            ⚙️
+          </button>
+        </div>
       </header>
 
       {showSettings && (
@@ -229,6 +389,21 @@ export default function Home() {
             Dark Mode
           </label>
           <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
+        </div>
+      )}
+
+      {showExportOptions && (
+        <div style={{ ...styles.exportPanel, background: theme.settingsBg, borderColor: theme.borderColor }}>
+          <div style={styles.exportTitle}>Export Chat As:</div>
+          <div style={styles.exportButtons}>
+            <button onClick={exportAsText} style={styles.exportBtn}>📄 Text</button>
+            <button onClick={exportAsJSON} style={styles.exportBtn}>📊 JSON</button>
+            <button onClick={exportAsMarkdown} style={styles.exportBtn}>📝 Markdown</button>
+            <button onClick={exportAsHTML} style={styles.exportBtn}>🌐 HTML</button>
+          </div>
+          <div style={styles.exportCount}>
+            {messages.length} messages will be exported
+          </div>
         </div>
       )}
 
@@ -281,7 +456,7 @@ export default function Home() {
           {suggestions.map((suggestion, i) => (
             <button
               key={i}
-              style={{ ...styles.suggestionBtn, borderColor: theme.borderColor }}
+              style={{ ...styles.suggestionBtn, borderColor: theme.borderColor, color: theme.color }}
               onClick={() => sendMessageWithText(suggestion)}
             >
               {suggestion}
@@ -295,7 +470,8 @@ export default function Home() {
           onClick={startListening} 
           style={{
             ...styles.iconButton,
-            background: listening ? "#ef4444" : theme.inputBg
+            background: listening ? "#ef4444" : theme.inputBg,
+            color: theme.color
           }}
         >
           {listening ? "⏹" : "🎤"}
@@ -303,7 +479,7 @@ export default function Home() {
 
         <button 
           onClick={() => fileInputRef.current.click()} 
-          style={{ ...styles.iconButton, background: theme.inputBg }}
+          style={{ ...styles.iconButton, background: theme.inputBg, color: theme.color }}
         >
           📷
         </button>
@@ -360,6 +536,19 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between"
   },
+  headerActions: {
+    display: "flex",
+    gap: "8px"
+  },
+  headerBtn: {
+    background: "transparent",
+    border: "none",
+    fontSize: "20px",
+    cursor: "pointer",
+    padding: "4px 8px",
+    borderRadius: "8px",
+    transition: "background 0.2s"
+  },
   logo: {
     display: "flex",
     alignItems: "center",
@@ -386,14 +575,6 @@ const styles = {
     color: "#94a3b8",
     marginTop: "-2px"
   },
-  settingsBtn: {
-    background: "transparent",
-    border: "none",
-    fontSize: "20px",
-    cursor: "pointer",
-    color: "#94a3b8",
-    transition: "color 0.2s"
-  },
   settingsPanel: {
     padding: "12px 20px",
     display: "flex",
@@ -417,6 +598,37 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     fontSize: "13px"
+  },
+  exportPanel: {
+    padding: "12px 20px",
+    borderBottom: "1px solid",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
+  },
+  exportTitle: {
+    fontSize: "14px",
+    fontWeight: "600"
+  },
+  exportButtons: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap"
+  },
+  exportBtn: {
+    padding: "6px 14px",
+    borderRadius: "8px",
+    border: "1px solid #6366f1",
+    background: "transparent",
+    color: "#6366f1",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "500",
+    transition: "all 0.2s"
+  },
+  exportCount: {
+    fontSize: "12px",
+    opacity: 0.7
   },
   chat: {
     flex: 1,
