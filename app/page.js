@@ -12,16 +12,10 @@ export default function Home() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
-  const [liveMode, setLiveMode] = useState(false);
-  const [liveResult, setLiveResult] = useState("Starting camera...");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-  const liveInterval = useRef(null);
 
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
@@ -30,7 +24,10 @@ export default function Home() {
     if (savedMessages) {
       setMessages(JSON.parse(savedMessages));
     } else {
-      setMessages([{ role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }]);
+      setMessages([{ 
+        role: "assistant", 
+        content: "Hello! I'm **Myralis AI**. How can I help you today?" 
+      }]);
     }
 
     if (savedSpeak !== null) {
@@ -59,7 +56,10 @@ export default function Home() {
   }
 
   function clearChat() {
-    const welcome = [{ role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }];
+    const welcome = [{ 
+      role: "assistant", 
+      content: "Hello! I'm **Myralis AI**. How can I help you today?" 
+    }];
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowSettings(false);
@@ -105,109 +105,13 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  // ==================== LIVE VISION ====================
-  async function startLiveVision() {
-    try {
-      setLiveResult("Requesting camera access...");
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        },
-        audio: false
-      });
-
-      streamRef.current = stream;
-      setLiveMode(true);
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play();
-            setLiveResult("Camera ready. Point at something...");
-            
-            liveInterval.current = setInterval(() => {
-              captureAndAnalyze();
-            }, 5000);
-          };
-        }
-      }, 300);
-
-    } catch (err) {
-      console.error(err);
-      alert("Could not access camera. Please allow camera permission and try again.");
-      setLiveMode(false);
-    }
-  }
-
-  function stopLiveVision() {
-    if (liveInterval.current) {
-      clearInterval(liveInterval.current);
-      liveInterval.current = null;
-    }
-    
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
-    setLiveMode(false);
-    setLiveResult("");
-    setIsAnalyzing(false);
-  }
-
-  async function captureAndAnalyze() {
-    if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
-
-    const video = videoRef.current;
-    if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-    setIsAnalyzing(true);
-    setLiveResult("Analyzing...");
-
-    const canvas = canvasRef.current;
-    // REDUCED SIZE for faster processing
-    canvas.width = 480;
-    canvas.height = 360;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // BETTER COMPRESSION
-    const base64Image = canvas.toDataURL("image/jpeg", 0.2);
-
-    try {
-      const res = await fetch("/api/vision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Image })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('API Error:', errorText);
-        throw new Error('API request failed');
-      }
-
-      const data = await res.json();
-      setLiveResult(data.reply || "Could not analyze this frame.");
-    } catch (err) {
-      console.error('Vision error:', err);
-      setLiveResult("⚠️ Analysis failed. Trying again...");
-    }
-
-    setIsAnalyzing(false);
-  }
-
   async function sendMessageWithText(text) {
     if ((!text.trim() && !image) || loading) return;
 
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
+    setIsThinking(true);
     window.speechSynthesis.cancel();
 
     const newUserMsg = {
@@ -231,21 +135,40 @@ export default function Home() {
       const data = await res.json();
 
       if (data.error) {
-        setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: "Error: " + data.error 
+        }]);
       } else {
-        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: data.reply 
+        }]);
         speak(data.reply);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "Connection error. Please try again." 
+      }]);
     }
 
     setLoading(false);
+    setIsThinking(false);
   }
 
   function sendMessage() {
     sendMessageWithText(input);
   }
+
+  // Quick reply suggestions
+  const suggestions = [
+    "What can you help me with?",
+    "Tell me a fun fact",
+    "Explain AI in simple terms",
+    "What's the weather like?",
+    "Help me with my code"
+  ];
 
   return (
     <div style={styles.container}>
@@ -257,7 +180,9 @@ export default function Home() {
             <div style={styles.logoSub}>AI Companion</div>
           </div>
         </div>
-        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>⚙️</button>
+        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>
+          ⚙️
+        </button>
       </header>
 
       {showSettings && (
@@ -270,96 +195,114 @@ export default function Home() {
         </div>
       )}
 
-      {liveMode ? (
-        <div style={styles.liveContainer}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={styles.video}
-          />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-
-          <div style={styles.liveOverlay}>
-            <div style={styles.liveResult}>
-              {liveResult}
-            </div>
-            <button onClick={stopLiveVision} style={styles.stopLiveBtn}>
-              Stop Live Vision
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div style={styles.chat}>
-            {messages.map((msg, i) => (
-              <div key={i} style={{
-                ...styles.message,
-                ...(msg.role === "user" ? styles.user : styles.bot)
-              }}>
-                {msg.image && (
-                  <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
-                )}
-                {msg.role === "assistant" ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                ) : (
-                  msg.content
-                )}
-              </div>
-            ))}
-            {loading && (
-              <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
-                Myralis is thinking...
-              </div>
+      <div style={styles.chat}>
+        {messages.map((msg, i) => (
+          <div 
+            key={i} 
+            style={{
+              ...styles.message,
+              ...(msg.role === "user" ? styles.user : styles.bot),
+              animation: 'fadeIn 0.3s ease'
+            }}
+          >
+            {msg.image && (
+              <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
             )}
-            <div ref={chatEnd} />
+            {msg.role === "assistant" ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+            ) : (
+              msg.content
+            )}
           </div>
-
-          {image && (
-            <div style={styles.imageBar}>
-              <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
-              <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
-            </div>
-          )}
-
-          <div style={styles.inputArea}>
-            <button onClick={startListening} style={{
-              ...styles.iconButton,
-              background: listening ? "#ef4444" : "#1e293b"
-            }}>
-              {listening ? "Listening" : "🎤"}
-            </button>
-
-            <button onClick={() => fileInputRef.current.click()} style={styles.iconButton}>
-              📷
-            </button>
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleImage}
-              style={{ display: "none" }}
-            />
-
-            <button onClick={startLiveVision} style={styles.iconButton}>
-              👁️
-            </button>
-
-            <input
-              style={styles.input}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder={listening ? "Listening..." : "Ask Myralis..."}
-            />
-
-            <button style={styles.button} onClick={sendMessage} disabled={loading}>
-              Send
-            </button>
+        ))}
+        
+        {loading && (
+          <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
+            <span style={styles.typingIndicator}>
+              <span>●</span>
+              <span>●</span>
+              <span>●</span>
+            </span>
           </div>
-        </>
+        )}
+        
+        <div ref={chatEnd} />
+      </div>
+
+      {image && (
+        <div style={styles.imageBar}>
+          <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
+          <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
+        </div>
       )}
+
+      {/* Quick Suggestions */}
+      {messages.length === 1 && !loading && (
+        <div style={styles.suggestions}>
+          {suggestions.map((suggestion, i) => (
+            <button
+              key={i}
+              style={styles.suggestionBtn}
+              onClick={() => sendMessageWithText(suggestion)}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={styles.inputArea}>
+        <button 
+          onClick={startListening} 
+          style={{
+            ...styles.iconButton,
+            background: listening ? "#ef4444" : "#1e293b"
+          }}
+        >
+          {listening ? "⏹" : "🎤"}
+        </button>
+
+        <button 
+          onClick={() => fileInputRef.current.click()} 
+          style={styles.iconButton}
+        >
+          📷
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImage}
+          style={{ display: "none" }}
+        />
+
+        <input
+          style={styles.input}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder={listening ? "Listening..." : "Ask Myralis anything..."}
+          disabled={loading}
+        />
+
+        <button 
+          style={{
+            ...styles.button,
+            opacity: loading ? 0.5 : 1
+          }} 
+          onClick={sendMessage} 
+          disabled={loading}
+        >
+          {loading ? "⏳" : "Send"}
+        </button>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -412,7 +355,9 @@ const styles = {
     background: "transparent",
     border: "none",
     fontSize: "20px",
-    cursor: "pointer"
+    cursor: "pointer",
+    color: "#94a3b8",
+    transition: "color 0.2s"
   },
   settingsPanel: {
     background: "#1e293b",
@@ -426,7 +371,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "14px"
+    fontSize: "14px",
+    color: "#e4e4e7"
   },
   clearBtn: {
     background: "#ef4444",
@@ -463,6 +409,11 @@ const styles = {
     borderBottomLeftRadius: "6px",
     border: "1px solid #312e81"
   },
+  typingIndicator: {
+    display: "flex",
+    gap: "6px",
+    fontSize: "20px"
+  },
   imagePreview: {
     maxWidth: "100%",
     borderRadius: "12px",
@@ -484,6 +435,25 @@ const styles = {
     height: "24px",
     cursor: "pointer"
   },
+  suggestions: {
+    padding: "8px 20px",
+    display: "flex",
+    gap: "8px",
+    overflowX: "auto",
+    flexWrap: "wrap",
+    justifyContent: "center"
+  },
+  suggestionBtn: {
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "20px",
+    padding: "8px 16px",
+    color: "#e4e4e7",
+    fontSize: "13px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    whiteSpace: "nowrap"
+  },
   inputArea: {
     padding: "12px 14px",
     background: "#0f172a",
@@ -500,7 +470,8 @@ const styles = {
     padding: "12px 14px",
     color: "white",
     fontSize: "15px",
-    outline: "none"
+    outline: "none",
+    transition: "border-color 0.2s"
   },
   button: {
     background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -510,7 +481,8 @@ const styles = {
     height: "44px",
     color: "white",
     fontWeight: "600",
-    cursor: "pointer"
+    cursor: "pointer",
+    transition: "opacity 0.2s"
   },
   iconButton: {
     border: "none",
@@ -520,49 +492,7 @@ const styles = {
     color: "white",
     fontSize: "16px",
     cursor: "pointer",
-    background: "#1e293b"
-  },
-  liveContainer: {
-    flex: 1,
-    position: "relative",
-    background: "#000",
-    overflow: "hidden"
-  },
-  video: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    background: "#000"
-  },
-  liveOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "linear-gradient(transparent, rgba(0,0,0,0.9))",
-    padding: "40px 20px 30px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px"
-  },
-  liveResult: {
-    background: "rgba(30, 27, 75, 0.92)",
-    border: "1px solid #6366f1",
-    borderRadius: "16px",
-    padding: "16px 18px",
-    fontSize: "15px",
-    lineHeight: 1.5,
-    color: "#e0e7ff",
-    minHeight: "60px"
-  },
-  stopLiveBtn: {
-    background: "#ef4444",
-    border: "none",
-    color: "white",
-    padding: "16px",
-    borderRadius: "14px",
-    fontWeight: "600",
-    fontSize: "16px",
-    cursor: "pointer"
+    background: "#1e293b",
+    transition: "background 0.2s"
   }
 };
