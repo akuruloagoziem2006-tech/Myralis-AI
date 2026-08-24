@@ -6,6 +6,10 @@ import remarkGfm from "remark-gfm";
 import SearchBar from './components/SearchBar';
 import ChatStats from './components/ChatStats';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
+import CopyMessage from './components/CopyMessage';
+import MessageTimestamp from './components/MessageTimestamp';
+import QuickActions from './components/QuickActions';
+import RegenerateButton from './components/RegenerateButton';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -22,10 +26,12 @@ export default function Home() {
   const [tempPrompt, setTempPrompt] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Load saved data
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
@@ -33,12 +39,19 @@ export default function Home() {
     const savedPrompt = localStorage.getItem("myralis_systemPrompt");
 
     if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
+      const parsed = JSON.parse(savedMessages);
+      setMessages(parsed);
+      // Find last assistant message
+      const lastAssistant = [...parsed].reverse().find(m => m.role === 'assistant');
+      setLastAssistantMessage(lastAssistant || null);
     } else {
-      setMessages([{ 
+      const welcome = [{ 
         role: "assistant", 
-        content: "Hello! I'm **Myralis AI**. How can I help you today?" 
-      }]);
+        content: "Hello! I'm **Myralis AI**. How can I help you today?",
+        timestamp: Date.now()
+      }];
+      setMessages(welcome);
+      setLastAssistantMessage(welcome[0]);
     }
 
     if (savedSpeak !== null) {
@@ -59,12 +72,14 @@ export default function Home() {
     }
   }, []);
 
+  // Save messages
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("myralis_messages", JSON.stringify(messages));
     }
   }, [messages]);
 
+  // Save settings
   useEffect(() => {
     localStorage.setItem("myralis_darkMode", darkMode.toString());
   }, [darkMode]);
@@ -74,9 +89,15 @@ export default function Home() {
   }, [systemPrompt]);
 
   useEffect(() => {
+    localStorage.setItem("myralis_autoSpeak", autoSpeak.toString());
+  }, [autoSpeak]);
+
+  // Scroll to bottom
+  useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Speak function
   function speak(text) {
     if (!autoSpeak || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -87,21 +108,23 @@ export default function Home() {
     window.speechSynthesis.speak(utterance);
   }
 
+  // Clear chat
   function clearChat() {
     const welcome = [{ 
       role: "assistant", 
-      content: "Hello! I'm **Myralis AI**. How can I help you today?" 
+      content: "Hello! I'm **Myralis AI**. How can I help you today?",
+      timestamp: Date.now()
     }];
     setMessages(welcome);
+    setLastAssistantMessage(welcome[0]);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowSettings(false);
     setShowExportOptions(false);
   }
 
+  // Toggle functions
   function toggleSpeak() {
-    const newValue = !autoSpeak;
-    setAutoSpeak(newValue);
-    localStorage.setItem("myralis_autoSpeak", newValue.toString());
+    setAutoSpeak(!autoSpeak);
   }
 
   function toggleDarkMode() {
@@ -127,7 +150,23 @@ export default function Home() {
     alert("✅ System prompt reset to default!");
   }
 
-  // Export functions...
+  // Regenerate response
+  async function regenerateResponse() {
+    if (!lastAssistantMessage || loading) return;
+    
+    // Remove the last assistant message
+    const newMessages = messages.slice(0, -1);
+    setMessages(newMessages);
+    setLastAssistantMessage(null);
+    
+    // Re-send the last user message
+    const lastUser = [...newMessages].reverse().find(m => m.role === 'user');
+    if (lastUser) {
+      await sendMessageWithText(lastUser.content, true);
+    }
+  }
+
+  // Export functions
   function exportAsText() {
     if (messages.length === 0) return;
     let text = "Myralis AI Chat Export\n";
@@ -135,7 +174,8 @@ export default function Home() {
     text += `Exported: ${new Date().toLocaleString()}\n\n`;
     messages.forEach(msg => {
       const role = msg.role === 'user' ? '👤 You' : '🤖 Myralis';
-      text += `${role}:\n`;
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+      text += `${role} ${time}:\n`;
       text += `${msg.content}\n\n`;
     });
     text += "=".repeat(40) + "\n";
@@ -153,7 +193,7 @@ export default function Home() {
       messages: messages.map(msg => ({
         role: msg.role,
         content: msg.content,
-        timestamp: new Date().toISOString(),
+        timestamp: msg.timestamp || new Date().toISOString(),
         hasImage: !!msg.image
       }))
     };
@@ -169,7 +209,8 @@ export default function Home() {
     md += `---\n\n`;
     messages.forEach(msg => {
       const role = msg.role === 'user' ? '👤 **You**' : '🤖 **Myralis**';
-      md += `### ${role}\n\n`;
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+      md += `### ${role} ${time}\n\n`;
       md += `${msg.content}\n\n`;
     });
     md += `---\n\n`;
@@ -192,6 +233,7 @@ export default function Home() {
     .user { background: #1e293b; text-align: right; border-bottom-right-radius: 4px; }
     .assistant { background: #1e1b4b; border-left: 3px solid #6366f1; border-bottom-left-radius: 4px; }
     .role { font-weight: bold; margin-bottom: 4px; font-size: 14px; opacity: 0.8; }
+    .time { font-size: 11px; opacity: 0.4; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #334155; text-align: center; font-size: 14px; opacity: 0.6; }
   </style>
 </head>
@@ -208,6 +250,7 @@ export default function Home() {
       <div class="role">${msg.role === 'user' ? '👤 You' : '🤖 Myralis'}</div>
       <div>${msg.content}</div>
       ${msg.image ? '<div style="margin-top:8px"><img src="' + msg.image + '" style="max-width:200px;border-radius:8px" /></div>' : ''}
+      <div class="time">${msg.timestamp ? new Date(msg.timestamp).toLocaleString() : ''}</div>
     </div>
   `).join('')}
   <div class="footer">
@@ -231,6 +274,7 @@ export default function Home() {
     setShowExportOptions(false);
   }
 
+  // Start listening
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -252,6 +296,7 @@ export default function Home() {
     recognition.start();
   }
 
+  // Handle image upload
   function handleImage(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -260,19 +305,25 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  async function sendMessageWithText(text) {
+  // Send message
+  async function sendMessageWithText(text, isRegenerate = false) {
     if ((!text.trim() && !image) || loading) return;
+
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
     window.speechSynthesis.cancel();
+
     const newUserMsg = {
       role: "user",
       content: userMessage,
-      image: image || null
+      image: image || null,
+      timestamp: Date.now()
     };
+
     setMessages(prev => [...prev, newUserMsg]);
     setImage(null);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -282,21 +333,45 @@ export default function Home() {
           systemPrompt: systemPrompt
         })
       });
+
       const data = await res.json();
+
+      const assistantMsg = {
+        role: "assistant",
+        content: data.reply || "Sorry, I couldn't process that.",
+        timestamp: Date.now()
+      };
+
       if (data.error) {
-        setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: "Error: " + data.error,
+          timestamp: Date.now()
+        }]);
       } else {
-        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        setMessages(prev => [...prev, assistantMsg]);
+        setLastAssistantMessage(assistantMsg);
         speak(data.reply);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "Connection error. Please try again.",
+        timestamp: Date.now()
+      }]);
     }
+
     setLoading(false);
   }
 
   function sendMessage() {
     sendMessageWithText(input);
+  }
+
+  // Quick action handler
+  function handleQuickAction(prompt) {
+    setInput(prompt);
+    setTimeout(() => sendMessageWithText(prompt), 100);
   }
 
   const suggestions = [
@@ -307,6 +382,7 @@ export default function Home() {
     "Help me with my code"
   ];
 
+  // Theme
   const theme = darkMode ? {
     background: "#0b0d13",
     color: "#e4e4e7",
@@ -425,6 +501,18 @@ export default function Home() {
             ) : (
               msg.content
             )}
+            <div style={styles.messageFooter}>
+              <MessageTimestamp timestamp={msg.timestamp} />
+              <div style={styles.messageActions}>
+                <CopyMessage content={msg.content} />
+                {msg.role === 'assistant' && i === messages.length - 1 && (
+                  <RegenerateButton 
+                    onRegenerate={regenerateResponse} 
+                    lastMessage={msg}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         ))}
         
@@ -458,6 +546,8 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      <QuickActions onAction={handleQuickAction} />
 
       <div style={{ ...styles.inputArea, borderColor: theme.borderColor, background: theme.background }}>
         <button 
@@ -534,7 +624,8 @@ const styles = {
     borderBottom: "1px solid",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    flexShrink: 0
   },
   headerActions: {
     display: "flex",
@@ -581,7 +672,8 @@ const styles = {
     alignItems: "center",
     borderBottom: "1px solid",
     gap: "12px",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
+    flexShrink: 0
   },
   settingItem: {
     display: "flex",
@@ -612,7 +704,8 @@ const styles = {
     borderBottom: "1px solid",
     display: "flex",
     flexDirection: "column",
-    gap: "10px"
+    gap: "10px",
+    flexShrink: 0
   },
   promptEditorHeader: {
     display: "flex",
@@ -682,7 +775,8 @@ const styles = {
     borderBottom: "1px solid",
     display: "flex",
     flexDirection: "column",
-    gap: "10px"
+    gap: "10px",
+    flexShrink: 0
   },
   exportTitle: {
     fontSize: "14px",
@@ -714,14 +808,16 @@ const styles = {
     padding: "20px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px"
+    gap: "16px",
+    minHeight: 0
   },
   message: {
     maxWidth: "85%",
     padding: "14px 18px",
     borderRadius: "18px",
     lineHeight: 1.6,
-    fontSize: "15px"
+    fontSize: "15px",
+    position: "relative"
   },
   user: {
     alignSelf: "flex-end",
@@ -731,6 +827,18 @@ const styles = {
     alignSelf: "flex-start",
     borderBottomLeftRadius: "6px",
     border: "1px solid"
+  },
+  messageFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "4px",
+    gap: "8px"
+  },
+  messageActions: {
+    display: "flex",
+    gap: "4px",
+    alignItems: "center"
   },
   typingIndicator: {
     display: "flex",
@@ -747,7 +855,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    borderTop: "1px solid"
+    borderTop: "1px solid",
+    flexShrink: 0
   },
   removeImg: {
     background: "#ef4444",
@@ -764,7 +873,8 @@ const styles = {
     gap: "8px",
     overflowX: "auto",
     flexWrap: "wrap",
-    justifyContent: "center"
+    justifyContent: "center",
+    flexShrink: 0
   },
   suggestionBtn: {
     background: "transparent",
@@ -781,7 +891,8 @@ const styles = {
     borderTop: "1px solid",
     display: "flex",
     gap: "8px",
-    alignItems: "center"
+    alignItems: "center",
+    flexShrink: 0
   },
   input: {
     flex: 1,
