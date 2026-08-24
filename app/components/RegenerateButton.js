@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from 'react';
 
 export default function RegenerateButton({ onRegenerate, lastMessage }) {
@@ -14,25 +13,8 @@ export default function RegenerateButton({ onRegenerate, lastMessage }) {
   if (!lastMessage || lastMessage.role !== 'assistant') return null;
 
   return (
-    <button 
-      onClick={handleRegenerate} 
-      style={styles.regenerateBtn}
-      disabled={regenerating}
-    >
+    <button onClick={handleRegenerate} style={{background:"transparent",border:"1px solid #6366f1",borderRadius:"16px",padding:"4px 12px",color:"#6366f1",cursor:"pointer",fontSize:"12px"}} disabled={regenerating}>
       {regenerating ? '⟳ Regenerating...' : '⟳ Regenerate'}
     </button>
   );
 }
-
-const styles = {
-  regenerateBtn: {
-    background: 'transparent',
-    border: '1px solid #6366f1',
-    borderRadius: '16px',
-    padding: '4px 12px',
-    color: '#6366f1',
-    cursor: 'pointer',
-    fontSize: '12px',
-    transition: 'all 0.2s'
-  }
-};

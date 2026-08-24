@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from 'react';
 
 export default function DraftSaver({ input, onRestore, onClear }) {
@@ -11,15 +10,6 @@ export default function DraftSaver({ input, onRestore, onClear }) {
       setHasDraft(true);
     }
   }, []);
-
-  const saveDraft = (text) => {
-    if (text.trim().length > 0) {
-      localStorage.setItem('myralis_draft', text);
-      setHasDraft(true);
-    } else {
-      clearDraft();
-    }
-  };
 
   const clearDraft = () => {
     localStorage.removeItem('myralis_draft');
@@ -38,46 +28,10 @@ export default function DraftSaver({ input, onRestore, onClear }) {
   if (!hasDraft) return null;
 
   return (
-    <div style={styles.container}>
-      <span style={styles.draftIndicator}>💾 Draft saved</span>
-      <button onClick={restoreDraft} style={styles.restoreBtn}>
-        Restore
-      </button>
-      <button onClick={clearDraft} style={styles.dismissBtn}>
-        ✕
-      </button>
+    <div style={{padding:"4px 20px",display:"flex",gap:"8px",alignItems:"center",background:"#1e293b",borderBottom:"1px solid #334155",fontSize:"13px"}}>
+      <span style={{color:"#94a3b8"}}>💾 Draft saved</span>
+      <button onClick={restoreDraft} style={{background:"#6366f1",border:"none",color:"white",padding:"2px 10px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}>Restore</button>
+      <button onClick={clearDraft} style={{background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:"14px",padding:"0 4px"}}>✕</button>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    padding: "4px 20px",
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    background: "#1e293b",
-    borderBottom: "1px solid #334155",
-    fontSize: "13px"
-  },
-  draftIndicator: {
-    color: "#94a3b8"
-  },
-  restoreBtn: {
-    background: "#6366f1",
-    border: "none",
-    color: "white",
-    padding: "2px 10px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "12px"
-  },
-  dismissBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#64748b",
-    cursor: "pointer",
-    fontSize: "14px",
-    padding: "0 4px"
-  }
-};

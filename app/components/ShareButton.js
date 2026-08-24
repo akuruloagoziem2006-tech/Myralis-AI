@@ -41,24 +41,15 @@ export default function ShareButton({ messages, title }) {
   };
 
   return (
-    <div style={styles.container}>
-      <button 
-        onClick={handleShare} 
-        style={styles.shareBtn}
-        disabled={sharing || messages.length === 0}
-      >
+    <div style={{display:"flex",flexDirection:"column",gap:"8px",alignItems:"center"}}>
+      <button onClick={handleShare} style={{background:"#6366f1",border:"none",borderRadius:"8px",padding:"6px 16px",color:"white",cursor:"pointer",fontSize:"13px",fontWeight:"500"}} disabled={sharing || messages.length === 0}>
         {sharing ? '⏳ Sharing...' : '🔗 Share Chat'}
       </button>
 
       {shareUrl && (
-        <div style={styles.shareResult}>
-          <input 
-            type="text" 
-            value={shareUrl} 
-            readOnly 
-            style={styles.urlInput}
-          />
-          <button onClick={copyToClipboard} style={styles.copyBtn}>
+        <div style={{display:"flex",gap:"8px",width:"100%",maxWidth:"400px"}}>
+          <input type="text" value={shareUrl} readOnly style={{flex:1,padding:"6px 10px",borderRadius:"6px",border:"1px solid #334155",background:"#1e293b",color:"#e4e4e7",fontSize:"12px",fontFamily:"monospace"}} />
+          <button onClick={copyToClipboard} style={{padding:"6px 12px",borderRadius:"6px",border:"none",background:"#22c55e",color:"white",cursor:"pointer",fontSize:"12px",whiteSpace:"nowrap"}}>
             {copied ? '✅ Copied!' : '📋 Copy'}
           </button>
         </div>
@@ -66,48 +57,3 @@ export default function ShareButton({ messages, title }) {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    alignItems: "center"
-  },
-  shareBtn: {
-    background: "#6366f1",
-    border: "none",
-    borderRadius: "8px",
-    padding: "6px 16px",
-    color: "white",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "500"
-  },
-  shareResult: {
-    display: "flex",
-    gap: "8px",
-    width: "100%",
-    maxWidth: "400px"
-  },
-  urlInput: {
-    flex: 1,
-    padding: "6px 10px",
-    borderRadius: "6px",
-    border: "1px solid #334155",
-    background: "#1e293b",
-    color: "#e4e4e7",
-    fontSize: "12px",
-    fontFamily: "monospace"
-  },
-  copyBtn: {
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "none",
-    background: "#22c55e",
-    color: "white",
-    cursor: "pointer",
-    fontSize: "12px",
-    whiteSpace: "nowrap"
-  }
-};

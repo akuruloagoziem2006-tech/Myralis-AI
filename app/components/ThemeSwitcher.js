@@ -11,37 +11,21 @@ export default function ThemeSwitcher({ currentTheme, onThemeChange }) {
   ];
 
   return (
-    <div style={styles.container}>
+    <div style={{display:"flex",gap:"4px",alignItems:"center"}}>
       {themes.map(theme => (
-        <button
-          key={theme.value}
-          onClick={() => onThemeChange(theme.value)}
-          style={{
-            ...styles.themeBtn,
-            background: currentTheme === theme.value ? '#6366f1' : 'transparent',
-            color: currentTheme === theme.value ? 'white' : '#94a3b8'
-          }}
-          title={theme.name}
-        >
+        <button key={theme.value} onClick={() => onThemeChange(theme.value)} style={{
+          border:"1px solid #334155",
+          borderRadius:"8px",
+          padding:"4px 8px",
+          cursor:"pointer",
+          fontSize:"16px",
+          transition:"all 0.2s",
+          background: currentTheme === theme.value ? '#6366f1' : 'transparent',
+          color: currentTheme === theme.value ? 'white' : '#94a3b8'
+        }} title={theme.name}>
           {theme.emoji}
         </button>
       ))}
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    gap: '4px',
-    alignItems: 'center'
-  },
-  themeBtn: {
-    border: '1px solid #334155',
-    borderRadius: '8px',
-    padding: '4px 8px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    transition: 'all 0.2s'
-  }
-};

@@ -32,28 +32,10 @@ export default function PWAInstaller() {
   if (!showInstall) return null;
 
   return (
-    <div style={styles.container}>
-      <button onClick={handleInstall} style={styles.installBtn}>
+    <div style={{padding:"4px 12px",borderBottom:"1px solid #1e293b",background:"#1e293b"}}>
+      <button onClick={handleInstall} style={{background:"#6366f1",border:"none",color:"white",padding:"6px 16px",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"500"}}>
         📱 Install App
       </button>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    padding: "4px 12px",
-    borderBottom: "1px solid #1e293b",
-    background: "#1e293b"
-  },
-  installBtn: {
-    background: "#6366f1",
-    border: "none",
-    color: "white",
-    padding: "6px 16px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "500"
-  }
-};

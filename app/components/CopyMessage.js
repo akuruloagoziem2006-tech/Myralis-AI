@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from 'react';
 
 export default function CopyMessage({ content }) {
@@ -16,21 +15,8 @@ export default function CopyMessage({ content }) {
   };
 
   return (
-    <button onClick={handleCopy} style={styles.copyBtn} title="Copy message">
+    <button onClick={handleCopy} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:"14px",opacity:0.4,padding:"2px 6px",borderRadius:"4px"}}>
       {copied ? '✅' : '📋'}
     </button>
   );
 }
-
-const styles = {
-  copyBtn: {
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '14px',
-    opacity: 0.4,
-    padding: '2px 6px',
-    borderRadius: '4px',
-    transition: 'opacity 0.2s'
-  }
-};

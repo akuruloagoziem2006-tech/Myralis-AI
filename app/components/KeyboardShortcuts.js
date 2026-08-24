@@ -1,48 +1,25 @@
 "use client";
-
 import { useEffect } from 'react';
 
 export default function KeyboardShortcuts({ onShortcut }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ctrl + / or Cmd + / to show shortcuts
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        onShortcut('help');
-      }
-      
-      // Ctrl + K to focus search
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         onShortcut('search');
       }
-      
-      // Escape to cancel
       if (e.key === 'Escape') {
         onShortcut('escape');
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onShortcut]);
 
   return (
-    <div style={styles.shortcuts}>
+    <div style={{padding:"4px 20px",fontSize:"12px",color:"#64748b",display:"flex",gap:"16px",borderTop:"1px solid #1e293b"}}>
       <span>⌘K Search</span>
-      <span>⌘/ Help</span>
       <span>Esc Cancel</span>
     </div>
   );
 }
-
-const styles = {
-  shortcuts: {
-    padding: "4px 20px",
-    fontSize: "12px",
-    color: "#64748b",
-    display: "flex",
-    gap: "16px",
-    borderTop: "1px solid #1e293b"
-  }
-};
