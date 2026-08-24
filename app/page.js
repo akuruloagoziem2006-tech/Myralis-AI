@@ -5,43 +5,77 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export default function Home() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [image, setImage] = useState(null);
   const chatEnd = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Load saved data
+  useEffect(() => {
+    const savedMessages = localStorage.getItem("myralis_messages");
+    const savedSpeak = localStorage.getItem("myralis_autoSpeak");
+
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    } else {
+      setMessages([{ role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }]);
+    }
+
+    if (savedSpeak !== null) {
+      setAutoSpeak(savedSpeak === "true");
+    }
+  }, []);
+
+  // Save messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("myralis_messages", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
   function speak(text) {
-    if (!window.speechSynthesis) return;
+    if (!autoSpeak || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-
     const cleanText = text.replace(/[*#`_]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1;
     utterance.pitch = 1.05;
-    utterance.lang = "en-US";
     window.speechSynthesis.speak(utterance);
+  }
+
+  function clearChat() {
+    const welcome = [{ role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }];
+    setMessages(welcome);
+    localStorage.setItem("myralis_messages", JSON.stringify(welcome));
+    setShowSettings(false);
+  }
+
+  function toggleSpeak() {
+    const newValue = !autoSpeak;
+    setAutoSpeak(newValue);
+    localStorage.setItem("myralis_autoSpeak", newValue.toString());
   }
 
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser. Try Chrome.");
+      alert("Speech recognition not supported. Try Chrome.");
       return;
     }
 
     window.speechSynthesis.cancel();
-
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
-    recognition.continuous = false;
 
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
@@ -49,31 +83,47 @@ export default function Home() {
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
-
-      // Auto-send after voice input
-      setTimeout(() => {
-        sendMessageWithText(transcript);
-      }, 300);
+      setTimeout(() => sendMessageWithText(transcript), 300);
     };
 
     recognition.onerror = () => setListening(false);
     recognition.start();
   }
 
-  async function sendMessageWithText(text) {
-    if (!text.trim() || loading) return;
+  function handleImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
 
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function sendMessageWithText(text) {
+    if ((!text.trim() && !image) || loading) return;
+
+    const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: text }]);
     setLoading(true);
     window.speechSynthesis.cancel();
+
+    const newUserMsg = {
+      role: "user",
+      content: userMessage,
+      image: image || null
+    };
+
+    setMessages(prev => [...prev, newUserMsg]);
+    setImage(null);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: text }]
+          messages: [...messages, newUserMsg]
         })
       });
 
@@ -92,12 +142,13 @@ export default function Home() {
     setLoading(false);
   }
 
-  async function sendMessage() {
+  function sendMessage() {
     sendMessageWithText(input);
   }
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <header style={styles.header}>
         <div style={styles.logo}>
           <div style={styles.logoIcon}>✦</div>
@@ -106,17 +157,33 @@ export default function Home() {
             <div style={styles.logoSub}>AI Companion</div>
           </div>
         </div>
+
+        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>
+          ⚙️
+        </button>
       </header>
 
+      {/* Settings Panel */}
+      {showSettings && (
+        <div style={styles.settingsPanel}>
+          <label style={styles.settingItem}>
+            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
+            Auto Speak Replies
+          </label>
+          <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
+        </div>
+      )}
+
+      {/* Chat */}
       <div style={styles.chat}>
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.message,
-              ...(msg.role === "user" ? styles.user : styles.bot)
-            }}
-          >
+          <div key={i} style={{
+            ...styles.message,
+            ...(msg.role === "user" ? styles.user : styles.bot)
+          }}>
+            {msg.image && (
+              <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
+            )}
             {msg.role === "assistant" ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
             ) : (
@@ -133,17 +200,34 @@ export default function Home() {
         <div ref={chatEnd} />
       </div>
 
+      {/* Image Preview */}
+      {image && (
+        <div style={styles.imageBar}>
+          <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
+          <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
+        </div>
+      )}
+
+      {/* Input */}
       <div style={styles.inputArea}>
-        <button
-          onClick={startListening}
-          style={{
-            ...styles.iconButton,
-            background: listening ? "#ef4444" : "#1e293b",
-            minWidth: listening ? "110px" : "48px"
-          }}
-        >
+        <button onClick={startListening} style={{
+          ...styles.iconButton,
+          background: listening ? "#ef4444" : "#1e293b"
+        }}>
           {listening ? "Listening..." : "🎤"}
         </button>
+
+        <button onClick={() => fileInputRef.current.click()} style={styles.iconButton}>
+          📷
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          ref={fileInputRef}
+          onChange={handleImage}
+          style={{ display: "none" }}
+        />
 
         <input
           style={styles.input}
@@ -175,7 +259,8 @@ const styles = {
     background: "linear-gradient(90deg, #111827, #0f172a)",
     borderBottom: "1px solid #1e293b",
     display: "flex",
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "space-between"
   },
   logo: {
     display: "flex",
@@ -204,6 +289,35 @@ const styles = {
     color: "#94a3b8",
     marginTop: "-2px"
   },
+  settingsBtn: {
+    background: "transparent",
+    border: "none",
+    fontSize: "20px",
+    cursor: "pointer"
+  },
+  settingsPanel: {
+    background: "#1e293b",
+    padding: "12px 20px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #334155"
+  },
+  settingItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "14px"
+  },
+  clearBtn: {
+    background: "#ef4444",
+    border: "none",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px"
+  },
   chat: {
     flex: 1,
     overflowY: "auto",
@@ -230,12 +344,33 @@ const styles = {
     borderBottomLeftRadius: "6px",
     border: "1px solid #312e81"
   },
+  imagePreview: {
+    maxWidth: "100%",
+    borderRadius: "12px",
+    marginBottom: "8px"
+  },
+  imageBar: {
+    padding: "8px 16px",
+    background: "#1e293b",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px"
+  },
+  removeImg: {
+    background: "#ef4444",
+    border: "none",
+    color: "white",
+    borderRadius: "50%",
+    width: "24px",
+    height: "24px",
+    cursor: "pointer"
+  },
   inputArea: {
     padding: "14px 16px",
     background: "#0f172a",
     borderTop: "1px solid #1e293b",
     display: "flex",
-    gap: "10px",
+    gap: "8px",
     alignItems: "center"
   },
   input: {
@@ -252,7 +387,7 @@ const styles = {
     background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
     borderRadius: "14px",
-    padding: "0 20px",
+    padding: "0 18px",
     height: "46px",
     color: "white",
     fontWeight: "600",
@@ -262,8 +397,10 @@ const styles = {
     border: "none",
     borderRadius: "14px",
     height: "46px",
+    minWidth: "46px",
     color: "white",
-    fontSize: "15px",
-    cursor: "pointer"
+    fontSize: "16px",
+    cursor: "pointer",
+    background: "#1e293b"
   }
 };
