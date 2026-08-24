@@ -12,8 +12,14 @@ export default function Home() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveResult, setLiveResult] = useState("");
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const liveInterval = useRef(null);
 
   // Load saved data
   useEffect(() => {
@@ -31,7 +37,6 @@ export default function Home() {
     }
   }, []);
 
-  // Save messages
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("myralis_messages", JSON.stringify(messages));
@@ -101,6 +106,77 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
+  // ========== LIVE VISION ==========
+  async function startLiveVision() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      setLiveMode(true);
+      setLiveResult("Starting live vision...");
+
+      // Analyze every 4 seconds
+      liveInterval.current = setInterval(() => {
+        captureAndAnalyze();
+      }, 4000);
+
+    } catch (err) {
+      alert("Could not access camera. Please allow camera permission.");
+      console.error(err);
+    }
+  }
+
+  function stopLiveVision() {
+    if (liveInterval.current) clearInterval(liveInterval.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setLiveMode(false);
+    setLiveResult("");
+  }
+
+  async function captureAndAnalyze() {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const base64Image = canvas.toDataURL("image/jpeg", 0.6);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: "Briefly describe what you see. Focus on main objects. Keep it very short (max 2 sentences).",
+            image: base64Image
+          }]
+        })
+      });
+
+      const data = await res.json();
+      if (data.reply) {
+        setLiveResult(data.reply);
+      }
+    } catch (err) {
+      setLiveResult("Could not analyze...");
+    }
+  }
+
   async function sendMessageWithText(text) {
     if ((!text.trim() && !image) || loading) return;
 
@@ -163,84 +239,104 @@ export default function Home() {
         </button>
       </header>
 
-      {/* Settings Panel */}
+      {/* Settings */}
       {showSettings && (
         <div style={styles.settingsPanel}>
           <label style={styles.settingItem}>
             <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
-            Auto Speak Replies
+            Auto Speak
           </label>
           <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
         </div>
       )}
 
-      {/* Chat */}
-      <div style={styles.chat}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{
-            ...styles.message,
-            ...(msg.role === "user" ? styles.user : styles.bot)
-          }}>
-            {msg.image && (
-              <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
-            )}
-            {msg.role === "assistant" ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-            ) : (
-              msg.content
-            )}
+      {/* Live Vision Mode */}
+      {liveMode ? (
+        <div style={styles.liveContainer}>
+          <video ref={videoRef} autoPlay playsInline style={styles.video} />
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+          
+          <div style={styles.liveOverlay}>
+            <div style={styles.liveResult}>{liveResult || "Analyzing..."}</div>
+            <button onClick={stopLiveVision} style={styles.stopLiveBtn}>
+              Stop Live Vision
+            </button>
           </div>
-        ))}
-
-        {loading && (
-          <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
-            Myralis is thinking...
-          </div>
-        )}
-        <div ref={chatEnd} />
-      </div>
-
-      {/* Image Preview */}
-      {image && (
-        <div style={styles.imageBar}>
-          <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
-          <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
         </div>
+      ) : (
+        <>
+          {/* Normal Chat */}
+          <div style={styles.chat}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{
+                ...styles.message,
+                ...(msg.role === "user" ? styles.user : styles.bot)
+              }}>
+                {msg.image && (
+                  <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
+                )}
+                {msg.role === "assistant" ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                ) : (
+                  msg.content
+                )}
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
+                Myralis is thinking...
+              </div>
+            )}
+            <div ref={chatEnd} />
+          </div>
+
+          {/* Image Preview */}
+          {image && (
+            <div style={styles.imageBar}>
+              <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
+              <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
+            </div>
+          )}
+
+          {/* Input Area */}
+          <div style={styles.inputArea}>
+            <button onClick={startListening} style={{
+              ...styles.iconButton,
+              background: listening ? "#ef4444" : "#1e293b"
+            }}>
+              {listening ? "Listening" : "🎤"}
+            </button>
+
+            <button onClick={() => fileInputRef.current.click()} style={styles.iconButton}>
+              📷
+            </button>
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImage}
+              style={{ display: "none" }}
+            />
+
+            <button onClick={startLiveVision} style={styles.iconButton} title="Live Vision">
+              👁️
+            </button>
+
+            <input
+              style={styles.input}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder={listening ? "Listening..." : "Ask Myralis..."}
+            />
+
+            <button style={styles.button} onClick={sendMessage} disabled={loading}>
+              Send
+            </button>
+          </div>
+        </>
       )}
-
-      {/* Input */}
-      <div style={styles.inputArea}>
-        <button onClick={startListening} style={{
-          ...styles.iconButton,
-          background: listening ? "#ef4444" : "#1e293b"
-        }}>
-          {listening ? "Listening..." : "🎤"}
-        </button>
-
-        <button onClick={() => fileInputRef.current.click()} style={styles.iconButton}>
-          📷
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          ref={fileInputRef}
-          onChange={handleImage}
-          style={{ display: "none" }}
-        />
-
-        <input
-          style={styles.input}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder={listening ? "Listening..." : "Ask Myralis anything..."}
-        />
-
-        <button style={styles.button} onClick={sendMessage} disabled={loading}>
-          Send
-        </button>
-      </div>
     </div>
   );
 }
@@ -366,7 +462,7 @@ const styles = {
     cursor: "pointer"
   },
   inputArea: {
-    padding: "14px 16px",
+    padding: "12px 14px",
     background: "#0f172a",
     borderTop: "1px solid #1e293b",
     display: "flex",
@@ -378,7 +474,7 @@ const styles = {
     background: "#1e293b",
     border: "1px solid #334155",
     borderRadius: "14px",
-    padding: "13px 16px",
+    padding: "12px 14px",
     color: "white",
     fontSize: "15px",
     outline: "none"
@@ -387,20 +483,63 @@ const styles = {
     background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
     borderRadius: "14px",
-    padding: "0 18px",
-    height: "46px",
+    padding: "0 16px",
+    height: "44px",
     color: "white",
     fontWeight: "600",
     cursor: "pointer"
   },
   iconButton: {
     border: "none",
-    borderRadius: "14px",
-    height: "46px",
-    minWidth: "46px",
+    borderRadius: "12px",
+    height: "44px",
+    minWidth: "44px",
     color: "white",
     fontSize: "16px",
     cursor: "pointer",
     background: "#1e293b"
+  },
+  // Live Vision Styles
+  liveContainer: {
+    flex: 1,
+    position: "relative",
+    background: "#000",
+    display: "flex",
+    flexDirection: "column"
+  },
+  video: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover"
+  },
+  liveOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
+    padding: "30px 20px 25px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px"
+  },
+  liveResult: {
+    background: "rgba(30, 27, 75, 0.9)",
+    border: "1px solid #6366f1",
+    borderRadius: "14px",
+    padding: "14px 18px",
+    fontSize: "15px",
+    lineHeight: 1.5,
+    color: "#e0e7ff"
+  },
+  stopLiveBtn: {
+    background: "#ef4444",
+    border: "none",
+    color: "white",
+    padding: "14px",
+    borderRadius: "14px",
+    fontWeight: "600",
+    fontSize: "15px",
+    cursor: "pointer"
   }
 };
