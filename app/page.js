@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Home() {
   const [messages, setMessages] = useState([
@@ -8,11 +10,50 @@ export default function Home() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
   const chatEnd = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Text-to-Speech
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Speech-to-Text
+  function startListening() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+    };
+
+    recognition.onerror = () => setListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -37,6 +78,7 @@ export default function Home() {
         setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        speak(data.reply); // Auto speak the reply
       }
     } catch (err) {
       setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
@@ -60,14 +102,33 @@ export default function Home() {
               ...(msg.role === "user" ? styles.user : styles.bot)
             }}
           >
-            {msg.content}
+            {msg.role === "assistant" ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+            ) : (
+              msg.content
+            )}
           </div>
         ))}
-        {loading && <div style={{ ...styles.message, ...styles.bot, opacity: 0.6 }}>Myralis is thinking...</div>}
+        {loading && (
+          <div style={{ ...styles.message, ...styles.bot, opacity: 0.6 }}>
+            Myralis is thinking...
+          </div>
+        )}
         <div ref={chatEnd} />
       </div>
 
       <div style={styles.inputArea}>
+        <button
+          onClick={startListening}
+          style={{
+            ...styles.iconButton,
+            background: listening ? "#ef4444" : "#2a2f3e"
+          }}
+          title="Speak"
+        >
+          {listening ? "Listening..." : "🎤"}
+        </button>
+
         <input
           style={styles.input}
           value={input}
@@ -75,6 +136,7 @@ export default function Home() {
           onKeyDown={e => e.key === "Enter" && sendMessage()}
           placeholder="Ask me anything..."
         />
+
         <button style={styles.button} onClick={sendMessage} disabled={loading}>
           Send
         </button>
@@ -111,9 +173,8 @@ const styles = {
     maxWidth: "85%",
     padding: "12px 16px",
     borderRadius: 16,
-    lineHeight: 1.5,
-    fontSize: 15,
-    whiteSpace: "pre-wrap"
+    lineHeight: 1.6,
+    fontSize: 15
   },
   user: {
     background: "#2a2f3e",
@@ -130,7 +191,8 @@ const styles = {
     background: "#1a1d27",
     borderTop: "1px solid #2a2f3e",
     display: "flex",
-    gap: 10
+    gap: 10,
+    alignItems: "center"
   },
   input: {
     flex: 1,
@@ -147,8 +209,18 @@ const styles = {
     border: "none",
     borderRadius: 12,
     padding: "0 18px",
+    height: 44,
     color: "white",
     fontWeight: 600,
+    cursor: "pointer"
+  },
+  iconButton: {
+    border: "none",
+    borderRadius: 12,
+    width: 44,
+    height: 44,
+    color: "white",
+    fontSize: 18,
     cursor: "pointer"
   }
 };
