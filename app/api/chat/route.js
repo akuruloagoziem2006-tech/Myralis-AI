@@ -5,12 +5,16 @@ export const maxDuration = 10;
 
 export async function POST(req) {
   try {
-    const { messages } = await req.json();
+    const { messages, systemPrompt } = await req.json();
     
     // Get the last user message
     const lastUser = messages.filter(m => m.role === 'user').pop();
     const userText = lastUser?.content || '';
     let imageData = lastUser?.image || null;
+
+    // Build the system prompt
+    const defaultPrompt = "You are Myralis, a helpful, friendly, and knowledgeable AI assistant. You provide clear, concise, and accurate responses. You're supportive and encouraging. You can help with coding, general knowledge, creative tasks, and problem-solving. You respond in a warm and conversational tone.";
+    const systemInstruction = systemPrompt || defaultPrompt;
 
     // If there's an image, handle it with Gemini
     if (imageData) {
@@ -30,6 +34,9 @@ export async function POST(req) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: systemInstruction }]
+            },
             contents: [{
               parts: [
                 { text: userText || "Describe what you see briefly." },
@@ -41,6 +48,14 @@ export async function POST(req) {
       );
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Gemini API Error:', data);
+        return NextResponse.json({
+          reply: `API Error: ${data.error?.message || 'Unknown error'}`
+        });
+      }
+
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
                     "Could not analyze this image.";
 
@@ -52,6 +67,7 @@ export async function POST(req) {
       return NextResponse.json({ reply: "Please ask me something." });
     }
 
+    // Build conversation history
     const history = messages.slice(0, -1).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
@@ -63,6 +79,9 @@ export async function POST(req) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemInstruction }]
+          },
           contents: [
             ...history,
             { role: 'user', parts: [{ text: userText }] }
@@ -72,6 +91,14 @@ export async function POST(req) {
     );
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Gemini API Error:', data);
+      return NextResponse.json({
+        reply: `API Error: ${data.error?.message || 'Unknown error'}`
+      });
+    }
+
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
                   "I couldn't process that.";
 
@@ -80,7 +107,7 @@ export async function POST(req) {
   } catch (error) {
     console.error('Chat API error:', error);
     return NextResponse.json(
-      { reply: "Sorry, I encountered an error. Please try again." },
+      { reply: `Error: ${error.message || 'Please try again.'}` },
       { status: 500 }
     );
   }

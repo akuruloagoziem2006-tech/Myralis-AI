@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import SearchBar from './components/SearchBar';
+import ChatStats from './components/ChatStats';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -14,6 +17,11 @@ export default function Home() {
   const [image, setImage] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [tempPrompt, setTempPrompt] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -22,6 +30,7 @@ export default function Home() {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
     const savedDarkMode = localStorage.getItem("myralis_darkMode");
+    const savedPrompt = localStorage.getItem("myralis_systemPrompt");
 
     if (savedMessages) {
       setMessages(JSON.parse(savedMessages));
@@ -39,6 +48,15 @@ export default function Home() {
     if (savedDarkMode !== null) {
       setDarkMode(savedDarkMode === "true");
     }
+
+    if (savedPrompt) {
+      setSystemPrompt(savedPrompt);
+      setTempPrompt(savedPrompt);
+    } else {
+      const defaultPrompt = "You are Myralis, a helpful, friendly, and knowledgeable AI assistant. You provide clear, concise, and accurate responses. You're supportive and encouraging. You can help with coding, general knowledge, creative tasks, and problem-solving. You respond in a warm and conversational tone.";
+      setSystemPrompt(defaultPrompt);
+      setTempPrompt(defaultPrompt);
+    }
   }, []);
 
   useEffect(() => {
@@ -50,6 +68,10 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("myralis_darkMode", darkMode.toString());
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem("myralis_systemPrompt", systemPrompt);
+  }, [systemPrompt]);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,34 +108,48 @@ export default function Home() {
     setDarkMode(!darkMode);
   }
 
-  // ==================== EXPORT FUNCTIONS ====================
-  
+  function togglePromptEditor() {
+    setShowPromptEditor(!showPromptEditor);
+    setTempPrompt(systemPrompt);
+  }
+
+  function saveSystemPrompt() {
+    setSystemPrompt(tempPrompt);
+    setShowPromptEditor(false);
+    alert("✅ System prompt updated!");
+  }
+
+  function resetSystemPrompt() {
+    const defaultPrompt = "You are Myralis, a helpful, friendly, and knowledgeable AI assistant. You provide clear, concise, and accurate responses. You're supportive and encouraging. You can help with coding, general knowledge, creative tasks, and problem-solving. You respond in a warm and conversational tone.";
+    setSystemPrompt(defaultPrompt);
+    setTempPrompt(defaultPrompt);
+    setShowPromptEditor(false);
+    alert("✅ System prompt reset to default!");
+  }
+
+  // Export functions...
   function exportAsText() {
     if (messages.length === 0) return;
-    
     let text = "Myralis AI Chat Export\n";
     text += "=".repeat(40) + "\n\n";
     text += `Exported: ${new Date().toLocaleString()}\n\n`;
-    
     messages.forEach(msg => {
       const role = msg.role === 'user' ? '👤 You' : '🤖 Myralis';
       text += `${role}:\n`;
       text += `${msg.content}\n\n`;
     });
-    
     text += "=".repeat(40) + "\n";
     text += "Exported from Myralis AI";
-    
     downloadFile(text, 'chat_export.txt', 'text/plain');
   }
 
   function exportAsJSON() {
     if (messages.length === 0) return;
-    
     const data = {
       exportedAt: new Date().toISOString(),
       app: "Myralis AI",
       version: "1.0",
+      systemPrompt: systemPrompt,
       messages: messages.map(msg => ({
         role: msg.role,
         content: msg.content,
@@ -121,88 +157,51 @@ export default function Home() {
         hasImage: !!msg.image
       }))
     };
-    
     const json = JSON.stringify(data, null, 2);
     downloadFile(json, 'chat_export.json', 'application/json');
   }
 
   function exportAsMarkdown() {
     if (messages.length === 0) return;
-    
     let md = `# Myralis AI Chat Export\n\n`;
     md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
+    md += `**System Prompt:** ${systemPrompt}\n\n`;
     md += `---\n\n`;
-    
     messages.forEach(msg => {
       const role = msg.role === 'user' ? '👤 **You**' : '🤖 **Myralis**';
       md += `### ${role}\n\n`;
       md += `${msg.content}\n\n`;
     });
-    
     md += `---\n\n`;
     md += `*Exported from Myralis AI*`;
-    
     downloadFile(md, 'chat_export.md', 'text/markdown');
   }
 
   function exportAsHTML() {
     if (messages.length === 0) return;
-    
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>Myralis AI Chat Export</title>
   <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #0b0d13;
-      color: #e4e4e7;
-    }
-    .header {
-      border-bottom: 2px solid #6366f1;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    .message {
-      padding: 12px 18px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      line-height: 1.6;
-    }
-    .user {
-      background: #1e293b;
-      text-align: right;
-      border-bottom-right-radius: 4px;
-    }
-    .assistant {
-      background: #1e1b4b;
-      border-left: 3px solid #6366f1;
-      border-bottom-left-radius: 4px;
-    }
-    .role {
-      font-weight: bold;
-      margin-bottom: 4px;
-      font-size: 14px;
-      opacity: 0.8;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #334155;
-      text-align: center;
-      font-size: 14px;
-      opacity: 0.6;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #0b0d13; color: #e4e4e7; }
+    .header { border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 30px; }
+    .system-prompt { background: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 3px solid #6366f1; }
+    .message { padding: 12px 18px; border-radius: 12px; margin-bottom: 16px; line-height: 1.6; }
+    .user { background: #1e293b; text-align: right; border-bottom-right-radius: 4px; }
+    .assistant { background: #1e1b4b; border-left: 3px solid #6366f1; border-bottom-left-radius: 4px; }
+    .role { font-weight: bold; margin-bottom: 4px; font-size: 14px; opacity: 0.8; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #334155; text-align: center; font-size: 14px; opacity: 0.6; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>✦ Myralis AI</h1>
     <p>Chat Export - ${new Date().toLocaleString()}</p>
+  </div>
+  <div class="system-prompt">
+    <strong>System Prompt:</strong> ${systemPrompt}
   </div>
   ${messages.map(msg => `
     <div class="message ${msg.role}">
@@ -216,7 +215,6 @@ export default function Home() {
   </div>
 </body>
 </html>`;
-    
     downloadFile(html, 'chat_export.html', 'text/html');
   }
 
@@ -239,21 +237,17 @@ export default function Home() {
       alert("Speech recognition not supported. Try Chrome.");
       return;
     }
-
     window.speechSynthesis.cancel();
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
-
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
       setTimeout(() => sendMessageWithText(transcript), 300);
     };
-
     recognition.onerror = () => setListening(false);
     recognition.start();
   }
@@ -261,7 +255,6 @@ export default function Home() {
   function handleImage(e) {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = () => setImage(reader.result);
     reader.readAsDataURL(file);
@@ -269,51 +262,36 @@ export default function Home() {
 
   async function sendMessageWithText(text) {
     if ((!text.trim() && !image) || loading) return;
-
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
     window.speechSynthesis.cancel();
-
     const newUserMsg = {
       role: "user",
       content: userMessage,
       image: image || null
     };
-
     setMessages(prev => [...prev, newUserMsg]);
     setImage(null);
-
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, newUserMsg]
+          messages: [...messages, newUserMsg],
+          systemPrompt: systemPrompt
         })
       });
-
       const data = await res.json();
-
       if (data.error) {
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: "Error: " + data.error 
-        }]);
+        setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: data.reply 
-        }]);
+        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
         speak(data.reply);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "Connection error. Please try again." 
-      }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
     }
-
     setLoading(false);
   }
 
@@ -351,6 +329,8 @@ export default function Home() {
     settingsBg: "#e5e7eb",
   };
 
+  const displayedMessages = isSearching && searchResults.length > 0 ? searchResults : messages;
+
   return (
     <div style={{ ...styles.container, background: theme.background, color: theme.color }}>
       <header style={{ ...styles.header, background: theme.headerBg, borderColor: theme.borderColor }}>
@@ -362,33 +342,45 @@ export default function Home() {
           </div>
         </div>
         <div style={styles.headerActions}>
-          <button 
-            onClick={() => setShowExportOptions(!showExportOptions)} 
-            style={styles.headerBtn}
-            title="Export Chat"
-          >
-            📤
-          </button>
-          <button 
-            onClick={() => setShowSettings(!showSettings)} 
-            style={styles.headerBtn}
-          >
-            ⚙️
-          </button>
+          <button onClick={() => setShowExportOptions(!showExportOptions)} style={styles.headerBtn}>📤</button>
+          <button onClick={() => setShowSettings(!showSettings)} style={styles.headerBtn}>⚙️</button>
         </div>
       </header>
 
       {showSettings && (
         <div style={{ ...styles.settingsPanel, background: theme.settingsBg, borderColor: theme.borderColor }}>
           <label style={styles.settingItem}>
-            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
-            Auto Speak
+            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} /> Auto Speak
           </label>
           <label style={styles.settingItem}>
-            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-            Dark Mode
+            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} /> Dark Mode
           </label>
+          <button onClick={togglePromptEditor} style={styles.promptBtn}>✏️ Edit System Prompt</button>
           <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
+        </div>
+      )}
+
+      {showPromptEditor && (
+        <div style={{ ...styles.promptEditor, background: theme.settingsBg, borderColor: theme.borderColor }}>
+          <div style={styles.promptEditorHeader}>
+            <h4 style={styles.promptEditorTitle}>System Prompt</h4>
+            <div style={styles.promptEditorActions}>
+              <button onClick={resetSystemPrompt} style={styles.resetPromptBtn}>Reset Default</button>
+              <button onClick={() => setShowPromptEditor(false)} style={styles.closePromptBtn}>✕</button>
+            </div>
+          </div>
+          <p style={styles.promptEditorDesc}>This controls Myralis's personality, behavior, and response style.</p>
+          <textarea
+            style={{ ...styles.promptTextarea, background: theme.inputBg, borderColor: theme.borderColor, color: theme.color }}
+            value={tempPrompt}
+            onChange={(e) => setTempPrompt(e.target.value)}
+            rows={6}
+            placeholder="Enter system prompt..."
+          />
+          <div style={styles.promptEditorFooter}>
+            <span style={styles.promptCharCount}>{tempPrompt.length} characters</span>
+            <button onClick={saveSystemPrompt} style={styles.savePromptBtn}>💾 Save Prompt</button>
+          </div>
         </div>
       )}
 
@@ -401,14 +393,19 @@ export default function Home() {
             <button onClick={exportAsMarkdown} style={styles.exportBtn}>📝 Markdown</button>
             <button onClick={exportAsHTML} style={styles.exportBtn}>🌐 HTML</button>
           </div>
-          <div style={styles.exportCount}>
-            {messages.length} messages will be exported
-          </div>
+          <div style={styles.exportCount}>{messages.length} messages</div>
         </div>
       )}
 
+      <SearchBar messages={messages} onSearch={(results) => {
+        setSearchResults(results);
+        setIsSearching(results.length > 0);
+      }} />
+      
+      <ChatStats messages={messages} />
+
       <div style={styles.chat}>
-        {messages.map((msg, i) => (
+        {displayedMessages.map((msg, i) => (
           <div 
             key={i} 
             style={{
@@ -434,13 +431,10 @@ export default function Home() {
         {loading && (
           <div style={{ ...styles.message, ...styles.bot, opacity: 0.65, background: theme.botBg }}>
             <span style={styles.typingIndicator}>
-              <span>●</span>
-              <span>●</span>
-              <span>●</span>
+              <span>●</span><span>●</span><span>●</span>
             </span>
           </div>
         )}
-        
         <div ref={chatEnd} />
       </div>
 
@@ -512,6 +506,12 @@ export default function Home() {
         </button>
       </div>
 
+      <KeyboardShortcuts onShortcut={(action) => {
+        if (action === 'search') {
+          document.querySelector('input[placeholder*="Search"]')?.focus();
+        }
+      }} />
+
       <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -546,8 +546,7 @@ const styles = {
     fontSize: "20px",
     cursor: "pointer",
     padding: "4px 8px",
-    borderRadius: "8px",
-    transition: "background 0.2s"
+    borderRadius: "8px"
   },
   logo: {
     display: "flex",
@@ -598,6 +597,85 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     fontSize: "13px"
+  },
+  promptBtn: {
+    background: "#6366f1",
+    border: "none",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px"
+  },
+  promptEditor: {
+    padding: "16px 20px",
+    borderBottom: "1px solid",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
+  },
+  promptEditorHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  promptEditorTitle: {
+    margin: 0,
+    fontSize: "16px"
+  },
+  promptEditorActions: {
+    display: "flex",
+    gap: "8px",
+    alignItems: "center"
+  },
+  resetPromptBtn: {
+    background: "transparent",
+    border: "1px solid #ef4444",
+    color: "#ef4444",
+    padding: "4px 10px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "12px"
+  },
+  closePromptBtn: {
+    background: "transparent",
+    border: "none",
+    fontSize: "18px",
+    cursor: "pointer",
+    padding: "0 4px"
+  },
+  promptEditorDesc: {
+    margin: 0,
+    fontSize: "13px",
+    opacity: 0.7
+  },
+  promptTextarea: {
+    width: "100%",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid",
+    fontSize: "14px",
+    fontFamily: "inherit",
+    resize: "vertical"
+  },
+  promptEditorFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  promptCharCount: {
+    fontSize: "12px",
+    opacity: 0.6
+  },
+  savePromptBtn: {
+    background: "#22c55e",
+    border: "none",
+    color: "white",
+    padding: "6px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "500"
   },
   exportPanel: {
     padding: "12px 20px",
