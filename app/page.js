@@ -6,29 +6,26 @@ import remarkGfm from "remark-gfm";
 
 export default function Home() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! I'm Myralis AI. How can I help you today?" }
+    { role: "assistant", content: "Hello! I'm **Myralis AI**. How can I help you today?" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const chatEnd = useRef(null);
-  const recognitionRef = useRef(null);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Text-to-Speech
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`]/g, ""));
     utterance.rate = 1;
-    utterance.pitch = 1;
+    utterance.pitch = 1.05;
     window.speechSynthesis.speak(utterance);
   }
 
-  // Speech-to-Text
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -39,19 +36,14 @@ export default function Home() {
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
+      setInput(event.results[0][0].transcript);
     };
-
     recognition.onerror = () => setListening(false);
 
-    recognitionRef.current = recognition;
     recognition.start();
   }
 
@@ -78,7 +70,7 @@ export default function Home() {
         setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
-        speak(data.reply); // Auto speak the reply
+        speak(data.reply);
       }
     } catch (err) {
       setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
@@ -89,10 +81,18 @@ export default function Home() {
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <header style={styles.header}>
-        <span style={{ color: "#7c9cff" }}>✦</span> Myralis AI
+        <div style={styles.logo}>
+          <div style={styles.logoIcon}>✦</div>
+          <div>
+            <div style={styles.logoText}>Myralis</div>
+            <div style={styles.logoSub}>AI Companion</div>
+          </div>
+        </div>
       </header>
 
+      {/* Chat Area */}
       <div style={styles.chat}>
         {messages.map((msg, i) => (
           <div
@@ -109,6 +109,7 @@ export default function Home() {
             )}
           </div>
         ))}
+
         {loading && (
           <div style={{ ...styles.message, ...styles.bot, opacity: 0.6 }}>
             Myralis is thinking...
@@ -117,6 +118,7 @@ export default function Home() {
         <div ref={chatEnd} />
       </div>
 
+      {/* Input Area */}
       <div style={styles.inputArea}>
         <button
           onClick={startListening}
@@ -124,9 +126,8 @@ export default function Home() {
             ...styles.iconButton,
             background: listening ? "#ef4444" : "#2a2f3e"
           }}
-          title="Speak"
         >
-          {listening ? "Listening..." : "🎤"}
+          {listening ? "Listening" : "🎤"}
         </button>
 
         <input
@@ -134,7 +135,7 @@ export default function Home() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && sendMessage()}
-          placeholder="Ask me anything..."
+          placeholder="Ask Myralis anything..."
         />
 
         <button style={styles.button} onClick={sendMessage} disabled={loading}>
@@ -150,77 +151,105 @@ const styles = {
     height: "100dvh",
     display: "flex",
     flexDirection: "column",
-    background: "#0f1117",
+    background: "#0b0d13",
     color: "#e4e4e7",
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   },
   header: {
-    padding: "16px 20px",
-    background: "#1a1d27",
-    borderBottom: "1px solid #2a2f3e",
-    fontWeight: 600,
-    fontSize: 18
+    padding: "14px 20px",
+    background: "linear-gradient(90deg, #111827, #0f172a)",
+    borderBottom: "1px solid #1e293b",
+    display: "flex",
+    alignItems: "center"
+  },
+  logo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px"
+  },
+  logoIcon: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "12px",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "18px",
+    color: "white",
+    fontWeight: "bold"
+  },
+  logoText: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#f8fafc"
+  },
+  logoSub: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    marginTop: "-2px"
   },
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: 20,
+    padding: "20px",
     display: "flex",
     flexDirection: "column",
-    gap: 16
+    gap: "16px"
   },
   message: {
     maxWidth: "85%",
-    padding: "12px 16px",
-    borderRadius: 16,
+    padding: "14px 18px",
+    borderRadius: "18px",
     lineHeight: 1.6,
-    fontSize: 15
+    fontSize: "15px"
   },
   user: {
-    background: "#2a2f3e",
+    background: "#1e293b",
     alignSelf: "flex-end",
-    borderBottomRightRadius: 4
+    borderBottomRightRadius: "6px"
   },
   bot: {
-    background: "#1e2330",
+    background: "#1e1b4b",
     alignSelf: "flex-start",
-    borderBottomLeftRadius: 4
+    borderBottomLeftRadius: "6px",
+    border: "1px solid #312e81"
   },
   inputArea: {
-    padding: "12px 16px",
-    background: "#1a1d27",
-    borderTop: "1px solid #2a2f3e",
+    padding: "14px 16px",
+    background: "#0f172a",
+    borderTop: "1px solid #1e293b",
     display: "flex",
-    gap: 10,
+    gap: "10px",
     alignItems: "center"
   },
   input: {
     flex: 1,
-    background: "#12151f",
-    border: "1px solid #2a2f3e",
-    borderRadius: 12,
-    padding: "12px 16px",
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "14px",
+    padding: "13px 16px",
     color: "white",
-    fontSize: 15,
+    fontSize: "15px",
     outline: "none"
   },
   button: {
-    background: "#7c9cff",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
-    borderRadius: 12,
-    padding: "0 18px",
-    height: 44,
+    borderRadius: "14px",
+    padding: "0 20px",
+    height: "46px",
     color: "white",
-    fontWeight: 600,
+    fontWeight: "600",
     cursor: "pointer"
   },
   iconButton: {
     border: "none",
-    borderRadius: 12,
-    width: 44,
-    height: 44,
+    borderRadius: "14px",
+    height: "46px",
+    padding: "0 14px",
     color: "white",
-    fontSize: 18,
+    fontSize: "15px",
     cursor: "pointer"
   }
 };
