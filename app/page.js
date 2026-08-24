@@ -13,7 +13,9 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
-  const [liveResult, setLiveResult] = useState("");
+  const [liveResult, setLiveResult] = useState("Starting camera...");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -21,7 +23,6 @@ export default function Home() {
   const streamRef = useRef(null);
   const liveInterval = useRef(null);
 
-  // Load saved data
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
@@ -100,52 +101,77 @@ export default function Home() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImage(reader.result);
-    };
+    reader.onloadend = () => setImage(reader.result);
     reader.readAsDataURL(file);
   }
 
-  // ========== LIVE VISION ==========
+  // ==================== LIVE VISION ====================
   async function startLiveVision() {
     try {
+      setLiveResult("Requesting camera access...");
+      
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: false
       });
 
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
       setLiveMode(true);
-      setLiveResult("Starting live vision...");
 
-      // Analyze every 4 seconds
-      liveInterval.current = setInterval(() => {
-        captureAndAnalyze();
-      }, 4000);
+      // Wait a bit for the video element to be ready
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play();
+            setLiveResult("Camera ready. Point at something...");
+            
+            // Start analyzing after camera is ready
+            liveInterval.current = setInterval(() => {
+              captureAndAnalyze();
+            }, 5000);
+          };
+        }
+      }, 300);
 
     } catch (err) {
-      alert("Could not access camera. Please allow camera permission.");
       console.error(err);
+      alert("Could not access camera. Please allow camera permission and try again.");
+      setLiveMode(false);
     }
   }
 
   function stopLiveVision() {
-    if (liveInterval.current) clearInterval(liveInterval.current);
+    if (liveInterval.current) {
+      clearInterval(liveInterval.current);
+      liveInterval.current = null;
+    }
+    
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
+    
     setLiveMode(false);
     setLiveResult("");
+    setIsAnalyzing(false);
   }
 
   async function captureAndAnalyze() {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
 
     const video = videoRef.current;
+    
+    // Make sure video has valid dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    setIsAnalyzing(true);
+    setLiveResult("Analyzing...");
+
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -153,7 +179,7 @@ export default function Home() {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const base64Image = canvas.toDataURL("image/jpeg", 0.6);
+    const base64Image = canvas.toDataURL("image/jpeg", 0.5);
 
     try {
       const res = await fetch("/api/chat", {
@@ -162,7 +188,7 @@ export default function Home() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: "Briefly describe what you see. Focus on main objects. Keep it very short (max 2 sentences).",
+            content: "Describe what you see very briefly in 1-2 short sentences. Focus on the main object or person.",
             image: base64Image
           }]
         })
@@ -171,10 +197,14 @@ export default function Home() {
       const data = await res.json();
       if (data.reply) {
         setLiveResult(data.reply);
+      } else {
+        setLiveResult("Could not analyze this frame.");
       }
     } catch (err) {
-      setLiveResult("Could not analyze...");
+      setLiveResult("Analysis failed. Trying again...");
     }
+
+    setIsAnalyzing(false);
   }
 
   async function sendMessageWithText(text) {
@@ -224,7 +254,6 @@ export default function Home() {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.logo}>
           <div style={styles.logoIcon}>✦</div>
@@ -233,13 +262,9 @@ export default function Home() {
             <div style={styles.logoSub}>AI Companion</div>
           </div>
         </div>
-
-        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>
-          ⚙️
-        </button>
+        <button onClick={() => setShowSettings(!showSettings)} style={styles.settingsBtn}>⚙️</button>
       </header>
 
-      {/* Settings */}
       {showSettings && (
         <div style={styles.settingsPanel}>
           <label style={styles.settingItem}>
@@ -250,14 +275,21 @@ export default function Home() {
         </div>
       )}
 
-      {/* Live Vision Mode */}
       {liveMode ? (
         <div style={styles.liveContainer}>
-          <video ref={videoRef} autoPlay playsInline style={styles.video} />
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={styles.video}
+          />
           <canvas ref={canvasRef} style={{ display: "none" }} />
-          
+
           <div style={styles.liveOverlay}>
-            <div style={styles.liveResult}>{liveResult || "Analyzing..."}</div>
+            <div style={styles.liveResult}>
+              {liveResult}
+            </div>
             <button onClick={stopLiveVision} style={styles.stopLiveBtn}>
               Stop Live Vision
             </button>
@@ -265,7 +297,6 @@ export default function Home() {
         </div>
       ) : (
         <>
-          {/* Normal Chat */}
           <div style={styles.chat}>
             {messages.map((msg, i) => (
               <div key={i} style={{
@@ -282,7 +313,6 @@ export default function Home() {
                 )}
               </div>
             ))}
-
             {loading && (
               <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
                 Myralis is thinking...
@@ -291,7 +321,6 @@ export default function Home() {
             <div ref={chatEnd} />
           </div>
 
-          {/* Image Preview */}
           {image && (
             <div style={styles.imageBar}>
               <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
@@ -299,7 +328,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Input Area */}
           <div style={styles.inputArea}>
             <button onClick={startListening} style={{
               ...styles.iconButton,
@@ -319,7 +347,7 @@ export default function Home() {
               style={{ display: "none" }}
             />
 
-            <button onClick={startLiveVision} style={styles.iconButton} title="Live Vision">
+            <button onClick={startLiveVision} style={styles.iconButton}>
               👁️
             </button>
 
@@ -499,47 +527,47 @@ const styles = {
     cursor: "pointer",
     background: "#1e293b"
   },
-  // Live Vision Styles
   liveContainer: {
     flex: 1,
     position: "relative",
     background: "#000",
-    display: "flex",
-    flexDirection: "column"
+    overflow: "hidden"
   },
   video: {
     width: "100%",
     height: "100%",
-    objectFit: "cover"
+    objectFit: "cover",
+    background: "#000"
   },
   liveOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
-    padding: "30px 20px 25px",
+    background: "linear-gradient(transparent, rgba(0,0,0,0.9))",
+    padding: "40px 20px 30px",
     display: "flex",
     flexDirection: "column",
-    gap: "15px"
+    gap: "16px"
   },
   liveResult: {
-    background: "rgba(30, 27, 75, 0.9)",
+    background: "rgba(30, 27, 75, 0.92)",
     border: "1px solid #6366f1",
-    borderRadius: "14px",
-    padding: "14px 18px",
+    borderRadius: "16px",
+    padding: "16px 18px",
     fontSize: "15px",
     lineHeight: 1.5,
-    color: "#e0e7ff"
+    color: "#e0e7ff",
+    minHeight: "60px"
   },
   stopLiveBtn: {
     background: "#ef4444",
     border: "none",
     color: "white",
-    padding: "14px",
+    padding: "16px",
     borderRadius: "14px",
     fontWeight: "600",
-    fontSize: "15px",
+    fontSize: "16px",
     cursor: "pointer"
   }
 };
