@@ -19,30 +19,51 @@ export default function Home() {
 
   function speak(text) {
     if (!window.speechSynthesis) return;
+
+    // Stop any current speech
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`]/g, ""));
+
+    const cleanText = text.replace(/[*#`_]/g, "");
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1;
     utterance.pitch = 1.05;
+    utterance.lang = "en-US";
+
     window.speechSynthesis.speak(utterance);
   }
 
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser.");
+      alert("Speech recognition is not supported in this browser. Try Chrome.");
       return;
     }
+
+    // Stop Myralis from speaking when user wants to talk
+    window.speechSynthesis.cancel();
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
+    recognition.continuous = false;
 
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onresult = (event) => {
-      setInput(event.results[0][0].transcript);
+    recognition.onstart = () => {
+      setListening(true);
     };
-    recognition.onerror = () => setListening(false);
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech error:", event.error);
+      setListening(false);
+    };
 
     recognition.start();
   }
@@ -54,6 +75,9 @@ export default function Home() {
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
+
+    // Stop any ongoing speech
+    window.speechSynthesis.cancel();
 
     try {
       const res = await fetch("/api/chat", {
@@ -92,7 +116,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Chat Area */}
+      {/* Chat */}
       <div style={styles.chat}>
         {messages.map((msg, i) => (
           <div
@@ -111,31 +135,32 @@ export default function Home() {
         ))}
 
         {loading && (
-          <div style={{ ...styles.message, ...styles.bot, opacity: 0.6 }}>
+          <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
             Myralis is thinking...
           </div>
         )}
         <div ref={chatEnd} />
       </div>
 
-      {/* Input Area */}
+      {/* Input */}
       <div style={styles.inputArea}>
         <button
           onClick={startListening}
           style={{
             ...styles.iconButton,
-            background: listening ? "#ef4444" : "#2a2f3e"
+            background: listening ? "#ef4444" : "#1e293b",
+            minWidth: listening ? "110px" : "48px"
           }}
         >
-          {listening ? "Listening" : "🎤"}
+          {listening ? "Listening..." : "🎤"}
         </button>
 
         <input
           style={styles.input}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && sendMessage()}
-          placeholder="Ask Myralis anything..."
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder={listening ? "Listening..." : "Ask Myralis anything..."}
         />
 
         <button style={styles.button} onClick={sendMessage} disabled={loading}>
@@ -247,9 +272,9 @@ const styles = {
     border: "none",
     borderRadius: "14px",
     height: "46px",
-    padding: "0 14px",
     color: "white",
     fontSize: "15px",
-    cursor: "pointer"
+    cursor: "pointer",
+    transition: "0.2s"
   }
 };
