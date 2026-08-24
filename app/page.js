@@ -113,8 +113,8 @@ export default function Home() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 640 },
+          height: { ideal: 480 }
         },
         audio: false
       });
@@ -122,7 +122,6 @@ export default function Home() {
       streamRef.current = stream;
       setLiveMode(true);
 
-      // Wait a bit for the video element to be ready
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -130,7 +129,6 @@ export default function Home() {
             videoRef.current.play();
             setLiveResult("Camera ready. Point at something...");
             
-            // Start analyzing after camera is ready
             liveInterval.current = setInterval(() => {
               captureAndAnalyze();
             }, 5000);
@@ -165,43 +163,40 @@ export default function Home() {
     if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
 
     const video = videoRef.current;
-    
-    // Make sure video has valid dimensions
     if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
     setIsAnalyzing(true);
     setLiveResult("Analyzing...");
 
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // REDUCED SIZE for faster processing
+    canvas.width = 480;
+    canvas.height = 360;
 
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const base64Image = canvas.toDataURL("image/jpeg", 0.5);
+    // BETTER COMPRESSION
+    const base64Image = canvas.toDataURL("image/jpeg", 0.2);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [{
-            role: "user",
-            content: "Describe what you see very briefly in 1-2 short sentences. Focus on the main object or person.",
-            image: base64Image
-          }]
-        })
+        body: JSON.stringify({ image: base64Image })
       });
 
-      const data = await res.json();
-      if (data.reply) {
-        setLiveResult(data.reply);
-      } else {
-        setLiveResult("Could not analyze this frame.");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('API Error:', errorText);
+        throw new Error('API request failed');
       }
+
+      const data = await res.json();
+      setLiveResult(data.reply || "Could not analyze this frame.");
     } catch (err) {
-      setLiveResult("Analysis failed. Trying again...");
+      console.error('Vision error:', err);
+      setLiveResult("⚠️ Analysis failed. Trying again...");
     }
 
     setIsAnalyzing(false);
