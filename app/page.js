@@ -12,7 +12,7 @@ export default function Home() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
-  const [isThinking, setIsThinking] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // Added dark mode
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -20,6 +20,7 @@ export default function Home() {
   useEffect(() => {
     const savedMessages = localStorage.getItem("myralis_messages");
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
+    const savedDarkMode = localStorage.getItem("myralis_darkMode");
 
     if (savedMessages) {
       setMessages(JSON.parse(savedMessages));
@@ -33,6 +34,10 @@ export default function Home() {
     if (savedSpeak !== null) {
       setAutoSpeak(savedSpeak === "true");
     }
+
+    if (savedDarkMode !== null) {
+      setDarkMode(savedDarkMode === "true");
+    }
   }, []);
 
   useEffect(() => {
@@ -40,6 +45,10 @@ export default function Home() {
       localStorage.setItem("myralis_messages", JSON.stringify(messages));
     }
   }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem("myralis_darkMode", darkMode.toString());
+  }, [darkMode]);
 
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,6 +78,10 @@ export default function Home() {
     const newValue = !autoSpeak;
     setAutoSpeak(newValue);
     localStorage.setItem("myralis_autoSpeak", newValue.toString());
+  }
+
+  function toggleDarkMode() {
+    setDarkMode(!darkMode);
   }
 
   function startListening() {
@@ -111,7 +124,6 @@ export default function Home() {
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
-    setIsThinking(true);
     window.speechSynthesis.cancel();
 
     const newUserMsg = {
@@ -154,14 +166,12 @@ export default function Home() {
     }
 
     setLoading(false);
-    setIsThinking(false);
   }
 
   function sendMessage() {
     sendMessageWithText(input);
   }
 
-  // Quick reply suggestions
   const suggestions = [
     "What can you help me with?",
     "Tell me a fun fact",
@@ -170,9 +180,32 @@ export default function Home() {
     "Help me with my code"
   ];
 
+  // Dynamic styles based on dark mode
+  const theme = darkMode ? {
+    background: "#0b0d13",
+    color: "#e4e4e7",
+    headerBg: "linear-gradient(90deg, #111827, #0f172a)",
+    borderColor: "#1e293b",
+    inputBg: "#1e293b",
+    userBg: "#1e293b",
+    botBg: "#1e1b4b",
+    botBorder: "#312e81",
+    settingsBg: "#1e293b",
+  } : {
+    background: "#f0f0f0",
+    color: "#1a1a1a",
+    headerBg: "linear-gradient(90deg, #e0e7ff, #c7d2fe)",
+    borderColor: "#d1d5db",
+    inputBg: "#ffffff",
+    userBg: "#dbeafe",
+    botBg: "#f3f4f6",
+    botBorder: "#9ca3af",
+    settingsBg: "#e5e7eb",
+  };
+
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
+    <div style={{ ...styles.container, background: theme.background, color: theme.color }}>
+      <header style={{ ...styles.header, background: theme.headerBg, borderColor: theme.borderColor }}>
         <div style={styles.logo}>
           <div style={styles.logoIcon}>✦</div>
           <div>
@@ -186,10 +219,14 @@ export default function Home() {
       </header>
 
       {showSettings && (
-        <div style={styles.settingsPanel}>
+        <div style={{ ...styles.settingsPanel, background: theme.settingsBg, borderColor: theme.borderColor }}>
           <label style={styles.settingItem}>
             <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
             Auto Speak
+          </label>
+          <label style={styles.settingItem}>
+            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+            Dark Mode
           </label>
           <button onClick={clearChat} style={styles.clearBtn}>Clear Chat</button>
         </div>
@@ -201,7 +238,10 @@ export default function Home() {
             key={i} 
             style={{
               ...styles.message,
-              ...(msg.role === "user" ? styles.user : styles.bot),
+              ...(msg.role === "user" ? 
+                { ...styles.user, background: theme.userBg } : 
+                { ...styles.bot, background: theme.botBg, borderColor: theme.botBorder }
+              ),
               animation: 'fadeIn 0.3s ease'
             }}
           >
@@ -217,7 +257,7 @@ export default function Home() {
         ))}
         
         {loading && (
-          <div style={{ ...styles.message, ...styles.bot, opacity: 0.65 }}>
+          <div style={{ ...styles.message, ...styles.bot, opacity: 0.65, background: theme.botBg }}>
             <span style={styles.typingIndicator}>
               <span>●</span>
               <span>●</span>
@@ -230,19 +270,18 @@ export default function Home() {
       </div>
 
       {image && (
-        <div style={styles.imageBar}>
+        <div style={{ ...styles.imageBar, background: theme.settingsBg, borderColor: theme.borderColor }}>
           <img src={image} alt="Preview" style={{ height: 50, borderRadius: 8 }} />
           <button onClick={() => setImage(null)} style={styles.removeImg}>✕</button>
         </div>
       )}
 
-      {/* Quick Suggestions */}
       {messages.length === 1 && !loading && (
         <div style={styles.suggestions}>
           {suggestions.map((suggestion, i) => (
             <button
               key={i}
-              style={styles.suggestionBtn}
+              style={{ ...styles.suggestionBtn, borderColor: theme.borderColor }}
               onClick={() => sendMessageWithText(suggestion)}
             >
               {suggestion}
@@ -251,12 +290,12 @@ export default function Home() {
         </div>
       )}
 
-      <div style={styles.inputArea}>
+      <div style={{ ...styles.inputArea, borderColor: theme.borderColor, background: theme.background }}>
         <button 
           onClick={startListening} 
           style={{
             ...styles.iconButton,
-            background: listening ? "#ef4444" : "#1e293b"
+            background: listening ? "#ef4444" : theme.inputBg
           }}
         >
           {listening ? "⏹" : "🎤"}
@@ -264,7 +303,7 @@ export default function Home() {
 
         <button 
           onClick={() => fileInputRef.current.click()} 
-          style={styles.iconButton}
+          style={{ ...styles.iconButton, background: theme.inputBg }}
         >
           📷
         </button>
@@ -277,7 +316,7 @@ export default function Home() {
         />
 
         <input
-          style={styles.input}
+          style={{ ...styles.input, background: theme.inputBg, borderColor: theme.borderColor, color: theme.color }}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
@@ -312,14 +351,11 @@ const styles = {
     height: "100dvh",
     display: "flex",
     flexDirection: "column",
-    background: "#0b0d13",
-    color: "#e4e4e7",
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   },
   header: {
     padding: "14px 20px",
-    background: "linear-gradient(90deg, #111827, #0f172a)",
-    borderBottom: "1px solid #1e293b",
+    borderBottom: "1px solid",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between"
@@ -343,8 +379,7 @@ const styles = {
   },
   logoText: {
     fontSize: "18px",
-    fontWeight: "700",
-    color: "#f8fafc"
+    fontWeight: "700"
   },
   logoSub: {
     fontSize: "12px",
@@ -360,19 +395,19 @@ const styles = {
     transition: "color 0.2s"
   },
   settingsPanel: {
-    background: "#1e293b",
     padding: "12px 20px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottom: "1px solid #334155"
+    borderBottom: "1px solid",
+    gap: "12px",
+    flexWrap: "wrap"
   },
   settingItem: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "14px",
-    color: "#e4e4e7"
+    fontSize: "14px"
   },
   clearBtn: {
     background: "#ef4444",
@@ -399,15 +434,13 @@ const styles = {
     fontSize: "15px"
   },
   user: {
-    background: "#1e293b",
     alignSelf: "flex-end",
     borderBottomRightRadius: "6px"
   },
   bot: {
-    background: "#1e1b4b",
     alignSelf: "flex-start",
     borderBottomLeftRadius: "6px",
-    border: "1px solid #312e81"
+    border: "1px solid"
   },
   typingIndicator: {
     display: "flex",
@@ -421,10 +454,10 @@ const styles = {
   },
   imageBar: {
     padding: "8px 16px",
-    background: "#1e293b",
     display: "flex",
     alignItems: "center",
-    gap: "10px"
+    gap: "10px",
+    borderTop: "1px solid"
   },
   removeImg: {
     background: "#ef4444",
@@ -444,11 +477,10 @@ const styles = {
     justifyContent: "center"
   },
   suggestionBtn: {
-    background: "#1e293b",
-    border: "1px solid #334155",
+    background: "transparent",
+    border: "1px solid",
     borderRadius: "20px",
     padding: "8px 16px",
-    color: "#e4e4e7",
     fontSize: "13px",
     cursor: "pointer",
     transition: "all 0.2s",
@@ -456,19 +488,16 @@ const styles = {
   },
   inputArea: {
     padding: "12px 14px",
-    background: "#0f172a",
-    borderTop: "1px solid #1e293b",
+    borderTop: "1px solid",
     display: "flex",
     gap: "8px",
     alignItems: "center"
   },
   input: {
     flex: 1,
-    background: "#1e293b",
-    border: "1px solid #334155",
+    border: "1px solid",
     borderRadius: "14px",
     padding: "12px 14px",
-    color: "white",
     fontSize: "15px",
     outline: "none",
     transition: "border-color 0.2s"
@@ -489,10 +518,8 @@ const styles = {
     borderRadius: "12px",
     height: "44px",
     minWidth: "44px",
-    color: "white",
     fontSize: "16px",
     cursor: "pointer",
-    background: "#1e293b",
     transition: "background 0.2s"
   }
 };
