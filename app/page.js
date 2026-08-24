@@ -10,6 +10,10 @@ import CopyMessage from './components/CopyMessage';
 import MessageTimestamp from './components/MessageTimestamp';
 import QuickActions from './components/QuickActions';
 import RegenerateButton from './components/RegenerateButton';
+import PinMessage from './components/PinMessage';
+import DraftSaver from './components/DraftSaver';
+import ContextMemory from './components/ContextMemory';
+import NotificationSound from './components/NotificationSound';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -27,9 +31,12 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // Load saved data
   useEffect(() => {
@@ -37,11 +44,11 @@ export default function Home() {
     const savedSpeak = localStorage.getItem("myralis_autoSpeak");
     const savedDarkMode = localStorage.getItem("myralis_darkMode");
     const savedPrompt = localStorage.getItem("myralis_systemPrompt");
+    const savedPinned = localStorage.getItem("myralis_pinned");
 
     if (savedMessages) {
       const parsed = JSON.parse(savedMessages);
       setMessages(parsed);
-      // Find last assistant message
       const lastAssistant = [...parsed].reverse().find(m => m.role === 'assistant');
       setLastAssistantMessage(lastAssistant || null);
     } else {
@@ -70,6 +77,10 @@ export default function Home() {
       setSystemPrompt(defaultPrompt);
       setTempPrompt(defaultPrompt);
     }
+
+    if (savedPinned) {
+      setPinnedMessages(JSON.parse(savedPinned));
+    }
   }, []);
 
   // Save messages
@@ -92,6 +103,10 @@ export default function Home() {
     localStorage.setItem("myralis_autoSpeak", autoSpeak.toString());
   }, [autoSpeak]);
 
+  useEffect(() => {
+    localStorage.setItem("myralis_pinned", JSON.stringify(pinnedMessages));
+  }, [pinnedMessages]);
+
   // Scroll to bottom
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,16 +125,20 @@ export default function Home() {
 
   // Clear chat
   function clearChat() {
-    const welcome = [{ 
-      role: "assistant", 
-      content: "Hello! I'm **Myralis AI**. How can I help you today?",
-      timestamp: Date.now()
-    }];
-    setMessages(welcome);
-    setLastAssistantMessage(welcome[0]);
-    localStorage.setItem("myralis_messages", JSON.stringify(welcome));
-    setShowSettings(false);
-    setShowExportOptions(false);
+    if (confirm("Are you sure you want to clear all messages?")) {
+      const welcome = [{ 
+        role: "assistant", 
+        content: "Hello! I'm **Myralis AI**. How can I help you today?",
+        timestamp: Date.now()
+      }];
+      setMessages(welcome);
+      setLastAssistantMessage(welcome[0]);
+      setPinnedMessages([]);
+      localStorage.setItem("myralis_messages", JSON.stringify(welcome));
+      localStorage.removeItem("myralis_pinned");
+      setShowSettings(false);
+      setShowExportOptions(false);
+    }
   }
 
   // Toggle functions
@@ -150,16 +169,38 @@ export default function Home() {
     alert("✅ System prompt reset to default!");
   }
 
+  // Pin message handler
+  function handlePinMessage(message, isPinned) {
+    if (isPinned) {
+      setPinnedMessages(prev => [...prev, message]);
+      // Move pinned message to top in display
+      setMessages(prev => {
+        const msgIndex = prev.indexOf(message);
+        const updated = [...prev];
+        updated.splice(msgIndex, 1);
+        updated.unshift({ ...message, pinned: true });
+        return updated;
+      });
+    } else {
+      setPinnedMessages(prev => prev.filter(m => m !== message));
+      setMessages(prev => {
+        const msgIndex = prev.indexOf(message);
+        const updated = [...prev];
+        updated.splice(msgIndex, 1);
+        updated.push({ ...message, pinned: false });
+        return updated;
+      });
+    }
+  }
+
   // Regenerate response
   async function regenerateResponse() {
     if (!lastAssistantMessage || loading) return;
     
-    // Remove the last assistant message
     const newMessages = messages.slice(0, -1);
     setMessages(newMessages);
     setLastAssistantMessage(null);
     
-    // Re-send the last user message
     const lastUser = [...newMessages].reverse().find(m => m.role === 'user');
     if (lastUser) {
       await sendMessageWithText(lastUser.content, true);
@@ -190,11 +231,13 @@ export default function Home() {
       app: "Myralis AI",
       version: "1.0",
       systemPrompt: systemPrompt,
+      pinnedMessages: pinnedMessages,
       messages: messages.map(msg => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp || new Date().toISOString(),
-        hasImage: !!msg.image
+        hasImage: !!msg.image,
+        pinned: msg.pinned || false
       }))
     };
     const json = JSON.stringify(data, null, 2);
@@ -229,6 +272,7 @@ export default function Home() {
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #0b0d13; color: #e4e4e7; }
     .header { border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 30px; }
     .system-prompt { background: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 3px solid #6366f1; }
+    .pinned { border-left: 3px solid #fbbf24; }
     .message { padding: 12px 18px; border-radius: 12px; margin-bottom: 16px; line-height: 1.6; }
     .user { background: #1e293b; text-align: right; border-bottom-right-radius: 4px; }
     .assistant { background: #1e1b4b; border-left: 3px solid #6366f1; border-bottom-left-radius: 4px; }
@@ -246,7 +290,7 @@ export default function Home() {
     <strong>System Prompt:</strong> ${systemPrompt}
   </div>
   ${messages.map(msg => `
-    <div class="message ${msg.role}">
+    <div class="message ${msg.role} ${msg.pinned ? 'pinned' : ''}">
       <div class="role">${msg.role === 'user' ? '👤 You' : '🤖 Myralis'}</div>
       <div>${msg.content}</div>
       ${msg.image ? '<div style="margin-top:8px"><img src="' + msg.image + '" style="max-width:200px;border-radius:8px" /></div>' : ''}
@@ -339,7 +383,8 @@ export default function Home() {
       const assistantMsg = {
         role: "assistant",
         content: data.reply || "Sorry, I couldn't process that.",
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        pinned: false
       };
 
       if (data.error) {
@@ -352,6 +397,8 @@ export default function Home() {
         setMessages(prev => [...prev, assistantMsg]);
         setLastAssistantMessage(assistantMsg);
         speak(data.reply);
+        setNotificationEnabled(true);
+        setTimeout(() => setNotificationEnabled(false), 100);
       }
     } catch (err) {
       setMessages(prev => [...prev, { 
@@ -409,6 +456,8 @@ export default function Home() {
 
   return (
     <div style={{ ...styles.container, background: theme.background, color: theme.color }}>
+      <NotificationSound enabled={notificationEnabled} />
+
       <header style={{ ...styles.header, background: theme.headerBg, borderColor: theme.borderColor }}>
         <div style={styles.logo}>
           <div style={styles.logoIcon}>✦</div>
@@ -478,7 +527,16 @@ export default function Home() {
         setIsSearching(results.length > 0);
       }} />
       
-      <ChatStats messages={messages} />
+      <div style={styles.topBar}>
+        <ChatStats messages={messages} />
+        <ContextMemory messages={messages} />
+      </div>
+
+      <DraftSaver 
+        input={input} 
+        onRestore={(draft) => setInput(draft)}
+        onClear={() => {}}
+      />
 
       <div style={styles.chat}>
         {displayedMessages.map((msg, i) => (
@@ -490,9 +548,11 @@ export default function Home() {
                 { ...styles.user, background: theme.userBg } : 
                 { ...styles.bot, background: theme.botBg, borderColor: theme.botBorder }
               ),
+              ...(msg.pinned ? styles.pinned : {}),
               animation: 'fadeIn 0.3s ease'
             }}
           >
+            {msg.pinned && <div style={styles.pinnedBadge}>📌 Pinned</div>}
             {msg.image && (
               <img src={msg.image} alt="Uploaded" style={styles.imagePreview} />
             )}
@@ -505,6 +565,10 @@ export default function Home() {
               <MessageTimestamp timestamp={msg.timestamp} />
               <div style={styles.messageActions}>
                 <CopyMessage content={msg.content} />
+                <PinMessage 
+                  message={msg} 
+                  onPin={(pinned) => handlePinMessage(msg, pinned)}
+                />
                 {msg.role === 'assistant' && i === messages.length - 1 && (
                   <RegenerateButton 
                     onRegenerate={regenerateResponse} 
@@ -576,9 +640,14 @@ export default function Home() {
         />
 
         <input
+          ref={searchInputRef}
           style={{ ...styles.input, background: theme.inputBg, borderColor: theme.borderColor, color: theme.color }}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            // Auto-save draft
+            localStorage.setItem('myralis_draft', e.target.value);
+          }}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder={listening ? "Listening..." : "Ask Myralis anything..."}
           disabled={loading}
@@ -598,7 +667,10 @@ export default function Home() {
 
       <KeyboardShortcuts onShortcut={(action) => {
         if (action === 'search') {
-          document.querySelector('input[placeholder*="Search"]')?.focus();
+          searchInputRef.current?.focus();
+        }
+        if (action === 'escape') {
+          setInput('');
         }
       }} />
 
@@ -802,6 +874,14 @@ const styles = {
     fontSize: "12px",
     opacity: 0.7
   },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #1e293b",
+    flexShrink: 0,
+    padding: "0 20px"
+  },
   chat: {
     flex: 1,
     overflowY: "auto",
@@ -827,6 +907,15 @@ const styles = {
     alignSelf: "flex-start",
     borderBottomLeftRadius: "6px",
     border: "1px solid"
+  },
+  pinned: {
+    border: "2px solid #fbbf24"
+  },
+  pinnedBadge: {
+    fontSize: "11px",
+    color: "#fbbf24",
+    fontWeight: "bold",
+    marginBottom: "4px"
   },
   messageFooter: {
     display: "flex",
