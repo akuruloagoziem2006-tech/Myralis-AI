@@ -19,8 +19,6 @@ export default function Home() {
 
   function speak(text) {
     if (!window.speechSynthesis) return;
-
-    // Stop any current speech
     window.speechSynthesis.cancel();
 
     const cleanText = text.replace(/[*#`_]/g, "");
@@ -28,7 +26,6 @@ export default function Home() {
     utterance.rate = 1;
     utterance.pitch = 1.05;
     utterance.lang = "en-US";
-
     window.speechSynthesis.speak(utterance);
   }
 
@@ -39,7 +36,6 @@ export default function Home() {
       return;
     }
 
-    // Stop Myralis from speaking when user wants to talk
     window.speechSynthesis.cancel();
 
     const recognition = new SpeechRecognition();
@@ -47,36 +43,29 @@ export default function Home() {
     recognition.interimResults = false;
     recognition.continuous = false;
 
-    recognition.onstart = () => {
-      setListening(true);
-    };
-
-    recognition.onend = () => {
-      setListening(false);
-    };
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
+
+      // Auto-send after voice input
+      setTimeout(() => {
+        sendMessageWithText(transcript);
+      }, 300);
     };
 
-    recognition.onerror = (event) => {
-      console.error("Speech error:", event.error);
-      setListening(false);
-    };
-
+    recognition.onerror = () => setListening(false);
     recognition.start();
   }
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
+  async function sendMessageWithText(text) {
+    if (!text.trim() || loading) return;
 
-    const userMessage = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setMessages(prev => [...prev, { role: "user", content: text }]);
     setLoading(true);
-
-    // Stop any ongoing speech
     window.speechSynthesis.cancel();
 
     try {
@@ -84,7 +73,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: userMessage }]
+          messages: [...messages, { role: "user", content: text }]
         })
       });
 
@@ -103,9 +92,12 @@ export default function Home() {
     setLoading(false);
   }
 
+  async function sendMessage() {
+    sendMessageWithText(input);
+  }
+
   return (
     <div style={styles.container}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.logo}>
           <div style={styles.logoIcon}>✦</div>
@@ -116,7 +108,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Chat */}
       <div style={styles.chat}>
         {messages.map((msg, i) => (
           <div
@@ -142,7 +133,6 @@ export default function Home() {
         <div ref={chatEnd} />
       </div>
 
-      {/* Input */}
       <div style={styles.inputArea}>
         <button
           onClick={startListening}
@@ -274,7 +264,6 @@ const styles = {
     height: "46px",
     color: "white",
     fontSize: "15px",
-    cursor: "pointer",
-    transition: "0.2s"
+    cursor: "pointer"
   }
 };
