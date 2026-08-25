@@ -1,52 +1,91 @@
-export async function POST(request) {
+import { NextResponse } from 'next/server';
+
+export const runtime = 'edge';
+export const maxDuration = 10;
+
+export async function POST(req) {
   try {
-    const { messages } = await request.json();
+    const { messages, systemPrompt } = await req.json();
+    
+    // Get the last user message
+    const lastUser = messages.filter(m => m.role === 'user').pop();
+    const userText = lastUser?.content || '';
+    let imageData = lastUser?.image || null;
 
-    const systemPrompt = `You are Myralis, a helpful, clear, and reliable AI model.
+    // Build the system prompt
+    const defaultPrompt = "You are Myralis, a helpful, friendly, and knowledgeable AI assistant. You provide clear, concise, and accurate responses. You're supportive and encouraging. You can help with coding, general knowledge, creative tasks, and problem-solving. You respond in a warm and conversational tone.";
+    const systemInstruction = systemPrompt || defaultPrompt;
 
-Be accurate, concise, and friendly. Explain things simply when needed. If you are unsure, say so.`;
+    // If there's an image, handle it with Gemini
+    if (imageData) {
+      if (imageData.includes(',')) {
+        imageData = imageData.split(',')[1];
+      }
 
-    const contents = [];
-
-    for (const msg of messages) {
-      const parts = [];
-
-      if (msg.image && msg.image.startsWith("data:image")) {
-        const base64Data = msg.image.split(",")[1];
-        parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
-            data: base64Data
-          }
+      if (imageData.length > 4_000_000) {
+        return NextResponse.json({
+          reply: "Image too large. Please use a smaller image."
         });
       }
 
-      if (msg.content && msg.content.trim() !== "") {
-        parts.push({ text: msg.content });
-      }
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: systemInstruction }]
+            },
+            contents: [{
+              parts: [
+                { text: userText || "Describe what you see briefly." },
+                { inline_data: { mime_type: "image/jpeg", data: imageData } }
+              ]
+            }]
+          })
+        }
+      );
 
-      if (parts.length > 0) {
-        contents.push({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Gemini API Error:', data);
+        return NextResponse.json({
+          reply: `API Error: ${data.error?.message || 'Unknown error'}`
         });
       }
+
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                    "Could not analyze this image.";
+
+      return NextResponse.json({ reply });
     }
 
+    // Text-only conversation
+    if (!userText) {
+      return NextResponse.json({ reply: "Please ask me something." });
+    }
+
+    // Build conversation history
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: systemPrompt }]
+            parts: [{ text: systemInstruction }]
           },
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048
-          }
+          contents: [
+            ...history,
+            { role: 'user', parts: [{ text: userText }] }
+          ]
         })
       }
     );
@@ -54,16 +93,22 @@ Be accurate, concise, and friendly. Explain things simply when needed. If you ar
     const data = await response.json();
 
     if (!response.ok) {
-      return Response.json(
-        { error: data.error?.message || "API Error" },
-        { status: 500 }
-      );
+      console.error('Gemini API Error:', data);
+      return NextResponse.json({
+        reply: `API Error: ${data.error?.message || 'Unknown error'}`
+      });
     }
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
-    return Response.json({ reply });
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                  "I couldn't process that.";
+
+    return NextResponse.json({ reply });
 
   } catch (error) {
-    return Response.json({ error: "Server error" }, { status: 500 });
+    console.error('Chat API error:', error);
+    return NextResponse.json(
+      { reply: `Error: ${error.message || 'Please try again.'}` },
+      { status: 500 }
+    );
   }
 }
