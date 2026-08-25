@@ -144,7 +144,7 @@ export default function Home() {
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header}>
-        <div style={styles.brand} onClick={() => setShowDashboard(!showDashboard)}>
+        <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <span style={styles.logo}>✦</span>
           <span style={styles.brandName}>Myralis</span>
         </div>
@@ -154,23 +154,43 @@ export default function Home() {
         </button>
       </header>
 
-      {/* Dashboard / Settings Panel */}
+      {/* Dashboard Overlay */}
       {showDashboard && (
-        <div style={styles.dashboard}>
-          <div style={styles.dashboardTitle}>Dashboard</div>
+        <div style={styles.overlay} onClick={() => setShowDashboard(false)}>
+          <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
+            {/* User / Brand Section */}
+            <div style={styles.userSection}>
+              <div style={styles.avatar}>✦</div>
+              <div>
+                <div style={styles.userName}>Myralis</div>
+                <div style={styles.userSub}>AI Companion</div>
+              </div>
+            </div>
 
-          <label style={styles.settingRow}>
-            <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
-            <span>Auto-speak replies</span>
-          </label>
+            {/* Menu Items */}
+            <div style={styles.menuSection}>
+              <button onClick={newChat} style={styles.menuItem}>
+                <span>💬</span> New Chat
+              </button>
 
-          <button onClick={newChat} style={styles.dashboardBtn}>
-            New Chat
-          </button>
+              <label style={styles.menuItem}>
+                <input
+                  type="checkbox"
+                  checked={autoSpeak}
+                  onChange={toggleSpeak}
+                  style={{ marginRight: 10 }}
+                />
+                Auto-speak replies
+              </label>
+            </div>
 
-          <button onClick={() => setShowDashboard(false)} style={styles.closeBtn}>
-            Close
-          </button>
+            {/* Footer */}
+            <div style={styles.dashboardFooter}>
+              <button onClick={() => setShowDashboard(false)} style={styles.closeBtn}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -282,43 +302,82 @@ const styles = {
     fontSize: 13,
     cursor: "pointer"
   },
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    zIndex: 50,
+    display: "flex"
+  },
   dashboard: {
+    width: 280,
+    height: "100%",
     background: "#111",
-    borderBottom: "1px solid #1f1f1f",
-    padding: "16px",
+    borderRight: "1px solid #222",
     display: "flex",
     flexDirection: "column",
-    gap: 14
+    padding: "20px 16px"
   },
-  dashboardTitle: {
-    fontSize: 15,
-    fontWeight: 600,
-    marginBottom: 4
+  userSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 28,
+    paddingBottom: 16,
+    borderBottom: "1px solid #222"
   },
-  settingRow: {
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 18,
+    color: "white"
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 600
+  },
+  userSub: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 2
+  },
+  menuSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    flex: 1
+  },
+  menuItem: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    fontSize: 14,
-    color: "#ccc"
-  },
-  dashboardBtn: {
-    background: "#1a1a1a",
-    border: "1px solid #333",
-    color: "white",
-    padding: "10px",
+    background: "transparent",
+    border: "none",
+    color: "#ddd",
+    padding: "12px 10px",
     borderRadius: 10,
-    fontSize: 14,
+    fontSize: 15,
     cursor: "pointer",
-    textAlign: "left"
+    textAlign: "left",
+    width: "100%"
+  },
+  dashboardFooter: {
+    borderTop: "1px solid #222",
+    paddingTop: 16
   },
   closeBtn: {
-    background: "transparent",
+    width: "100%",
+    background: "#1a1a1a",
     border: "1px solid #333",
     color: "#aaa",
-    padding: "8px",
+    padding: "12px",
     borderRadius: 10,
-    fontSize: 13,
+    fontSize: 14,
     cursor: "pointer"
   },
   chat: {
