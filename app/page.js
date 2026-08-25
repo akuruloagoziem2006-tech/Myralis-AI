@@ -14,6 +14,9 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
   const [pastChats, setPastChats] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [liked, setLiked] = useState({});
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -41,7 +44,7 @@ export default function Home() {
   }, [messages, loading]);
 
   function speak(text) {
-    if (!autoSpeak || !window.speechSynthesis) return;
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
     utterance.rate = 1;
@@ -73,6 +76,48 @@ export default function Home() {
     const newValue = !autoSpeak;
     setAutoSpeak(newValue);
     localStorage.setItem("myralis_autoSpeak", newValue.toString());
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text.replace(/[*#`_]/g, ""));
+  }
+
+  function shareText(text) {
+    if (navigator.share) {
+      navigator.share({ text: text.replace(/[*#`_]/g, "") });
+    } else {
+      copyText(text);
+      alert("Copied to clipboard (sharing not supported)");
+    }
+  }
+
+  function startEdit(index, content) {
+    setEditingIndex(index);
+    setEditText(content);
+  }
+
+  function saveEdit(index) {
+    const updated = [...messages];
+    updated[index].content = editText;
+    setMessages(updated);
+    setEditingIndex(null);
+    setEditText("");
+  }
+
+  function regenerate(index) {
+    // Find the user message before this assistant reply
+    if (index === 0) return;
+    const userMsg = messages[index - 1];
+    if (userMsg.role !== "user") return;
+
+    // Remove the old assistant reply and resend
+    const newMessages = messages.slice(0, index);
+    setMessages(newMessages);
+    setTimeout(() => sendMessageWithText(userMsg.content, newMessages), 100);
+  }
+
+  function toggleLike(index, value) {
+    setLiked(prev => ({ ...prev, [index]: value }));
   }
 
   function startListening() {
@@ -108,7 +153,7 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  async function sendMessageWithText(text) {
+  async function sendMessageWithText(text, currentMessages = messages) {
     if ((!text.trim() && !image) || loading) return;
 
     const userMessage = text.trim() || "What do you see in this image?";
@@ -117,14 +162,21 @@ export default function Home() {
     window.speechSynthesis.cancel();
 
     const newUserMsg = { role: "user", content: userMessage, image: image || null };
-    setMessages((prev) => [...prev, newUserMsg]);
+    
+    // Only add user message if it's a new one
+    let updatedMessages = currentMessages;
+    if (currentMessages === messages) {
+      updatedMessages = [...messages, newUserMsg];
+      setMessages(updatedMessages);
+    }
+    
     setImage(null);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, newUserMsg] })
+        body: JSON.stringify({ messages: updatedMessages })
       });
 
       const data = await res.json();
@@ -133,7 +185,7 @@ export default function Home() {
         setMessages((prev) => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
         setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-        speak(data.reply);
+        if (autoSpeak) speak(data.reply);
       }
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "Connection error." }]);
@@ -154,10 +206,7 @@ export default function Home() {
           <span style={styles.logo}>✦</span>
           <span style={styles.brandName}>Myralis</span>
         </div>
-
-        <button onClick={newChat} style={styles.newChatBtn}>
-          + New Chat
-        </button>
+        <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
       {/* Dashboard */}
@@ -179,9 +228,7 @@ export default function Home() {
             <div style={styles.sectionLabel}>Conversations</div>
             <div style={styles.chatList}>
               {pastChats.length === 0 && (
-                <div style={{ color: "#666", fontSize: 13, padding: "8px 10px" }}>
-                  No past conversations yet
-                </div>
+                <div style={{ color: "#666", fontSize: 13, padding: "8px 10px" }}>No past conversations yet</div>
               )}
               {pastChats.map((chat) => (
                 <button key={chat.id} onClick={() => loadChat(chat)} style={styles.chatItem}>
@@ -192,9 +239,7 @@ export default function Home() {
 
             <div style={styles.bottomBar}>
               <button style={styles.bottomBtn}>🔍 Search</button>
-              <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
-                ⚙️
-              </button>
+              <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>⚙️</button>
             </div>
 
             {showSettings && (
@@ -213,18 +258,63 @@ export default function Home() {
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
-              }}
-            >
-              {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
-              {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-              ) : (
-                msg.content
+              }}>
+                {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
+                
+                {editingIndex === i ? (
+                  <div>
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      style={styles.editArea}
+                      rows={3}
+                    />
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button onClick={() => saveEdit(i)} style={styles.smallBtn}>Save</button>
+                      <button onClick={() => setEditingIndex(null)} style={styles.smallBtnSecondary}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  msg.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              {editingIndex !== i && (
+                <div style={{
+                  ...styles.actions,
+                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start"
+                }}>
+                  {msg.role === "user" ? (
+                    <>
+                      <button onClick={() => startEdit(i, msg.content)} style={styles.actionBtn}>Edit</button>
+                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn}>Copy</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn}>Copy</button>
+                      <button onClick={() => shareText(msg.content)} style={styles.actionBtn}>Share</button>
+                      <button onClick={() => toggleLike(i, "like")} style={{
+                        ...styles.actionBtn,
+                        color: liked[i] === "like" ? "#4ade80" : "#888"
+                      }}>👍</button>
+                      <button onClick={() => toggleLike(i, "unlike")} style={{
+                        ...styles.actionBtn,
+                        color: liked[i] === "unlike" ? "#f87171" : "#888"
+                      }}>👎</button>
+                      <button onClick={() => speak(msg.content)} style={styles.actionBtn}>🔊</button>
+                      <button onClick={() => regenerate(i)} style={styles.actionBtn}>Regenerate</button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           ))}
@@ -249,19 +339,14 @@ export default function Home() {
       {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
-          <button
-            onClick={startListening}
-            style={{
-              ...styles.toolBtn,
-              background: listening ? "#3b82f6" : "transparent"
-            }}
-          >
+          <button onClick={startListening} style={{
+            ...styles.toolBtn,
+            background: listening ? "#3b82f6" : "transparent"
+          }}>
             {listening ? "●" : "🎙"}
           </button>
 
-          <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>
-            🖼
-          </button>
+          <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
 
           <input
@@ -309,14 +394,8 @@ const styles = {
     gap: 10,
     cursor: "pointer"
   },
-  logo: {
-    fontSize: 20,
-    color: "#a78bfa"
-  },
-  brandName: {
-    fontSize: 17,
-    fontWeight: 600
-  },
+  logo: { fontSize: 20, color: "#a78bfa" },
+  brandName: { fontSize: 17, fontWeight: 600 },
   newChatBtn: {
     background: "#1a1a1a",
     border: "1px solid #333",
@@ -360,15 +439,8 @@ const styles = {
     color: "white",
     flexShrink: 0
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: 600
-  },
-  userSub: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 2
-  },
+  userName: { fontSize: 16, fontWeight: 600 },
+  userSub: { fontSize: 12, color: "#888", marginTop: 2 },
   menuItem: {
     display: "flex",
     alignItems: "center",
@@ -450,7 +522,7 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     flexDirection: "column",
-    gap: 16,
+    gap: 8,
     width: "100%"
   },
   bubble: {
@@ -474,6 +546,49 @@ const styles = {
     maxWidth: "100%",
     borderRadius: 12,
     marginBottom: 10
+  },
+  actions: {
+    display: "flex",
+    gap: 6,
+    marginTop: 6,
+    flexWrap: "wrap"
+  },
+  actionBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#888",
+    fontSize: 12,
+    cursor: "pointer",
+    padding: "4px 8px",
+    borderRadius: 6
+  },
+  editArea: {
+    width: "100%",
+    background: "#111",
+    border: "1px solid #333",
+    borderRadius: 8,
+    color: "white",
+    padding: 10,
+    fontSize: 14,
+    resize: "vertical"
+  },
+  smallBtn: {
+    background: "#a78bfa",
+    border: "none",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: 6,
+    fontSize: 13,
+    cursor: "pointer"
+  },
+  smallBtnSecondary: {
+    background: "#333",
+    border: "none",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: 6,
+    fontSize: 13,
+    cursor: "pointer"
   },
   previewBar: {
     padding: "8px 16px",
