@@ -380,7 +380,7 @@ const styles = {
   chat: { flex: 1, overflowY: "auto", padding: "16px" },
   chatInner: { maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 4, width: "100%" },
   bubble: { lineHeight: 1.6, fontSize: "clamp(14px, 2.5vw, 15.5px)", width: "100%" },
-  userBubble: { alignSelf: "flex-end", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 18, padding: "12px 16px", maxWidth: "min(85%, 520px)" },
+  userBubble: { alignSelf: "flex-end", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 18, padding: "12px 16px", maxWidth: "min(80%, 480px)", marginLeft: "auto" },
   assistantBubble: { alignSelf: "flex-start", maxWidth: "min(90%, 720px)" },
   image: { maxWidth: "100%", borderRadius: 12, marginBottom: 10 },
   actions: { display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" },
