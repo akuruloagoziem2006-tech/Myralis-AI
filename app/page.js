@@ -383,7 +383,7 @@ const styles = {
   userBubble: { alignSelf: "flex-end", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 18, padding: "12px 16px", maxWidth: "min(80%, 480px)", marginLeft: "auto" },
   assistantBubble: { alignSelf: "flex-start", maxWidth: "min(90%, 720px)" },
   image: { maxWidth: "100%", borderRadius: 12, marginBottom: 10 },
-  actions: { display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" },
+  actions: { display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", justifyContent: "flex-end" },
   actionBtn: { background: "transparent", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "4px 8px", borderRadius: 6 },
   editArea: { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "white", padding: 10, fontSize: 14, resize: "vertical" },
   smallBtn: { background: "#a78bfa", border: "none", color: "white", padding: "6px 12px", borderRadius: 6, fontSize: 13, cursor: "pointer" },
