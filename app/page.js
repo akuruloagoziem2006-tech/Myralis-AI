@@ -10,7 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [image, setImage] = useState(null);
 
   const chatEnd = useRef(null);
@@ -24,10 +24,7 @@ export default function Home() {
       setMessages(JSON.parse(saved));
     } else {
       setMessages([
-        {
-          role: "assistant",
-          content: "Hello! I'm **Myralis**. How can I help you today?"
-        }
+        { role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }
       ]);
     }
 
@@ -49,17 +46,16 @@ export default function Home() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
     utterance.rate = 1;
-    utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
   }
 
-  function clearChat() {
+  function newChat() {
     const welcome = [
       { role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }
     ];
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
-    setShowSettings(false);
+    setShowDashboard(false);
   }
 
   function toggleSpeak() {
@@ -71,7 +67,7 @@ export default function Home() {
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported in this browser.");
+      alert("Speech recognition not supported.");
       return;
     }
 
@@ -122,30 +118,19 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, newUserMsg]
-        })
+        body: JSON.stringify({ messages: [...messages, newUserMsg] })
       });
 
       const data = await res.json();
 
       if (data.error) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Error: " + data.error }
-        ]);
+        setMessages((prev) => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.reply }
-        ]);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
         speak(data.reply);
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Connection error. Please try again." }
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Connection error." }]);
     }
 
     setLoading(false);
@@ -157,29 +142,34 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* Top Bar */}
+      {/* Header */}
       <header style={styles.header}>
-        <div style={styles.brand}>
+        <div style={styles.brand} onClick={() => setShowDashboard(!showDashboard)}>
           <span style={styles.logo}>✦</span>
           <span style={styles.brandName}>Myralis</span>
         </div>
 
-        <div style={styles.headerActions}>
-          <button onClick={() => setShowSettings(!showSettings)} style={styles.iconBtn}>
-            ⚙️
-          </button>
-        </div>
+        <button onClick={newChat} style={styles.newChatBtn}>
+          + New Chat
+        </button>
       </header>
 
-      {/* Settings */}
-      {showSettings && (
-        <div style={styles.settings}>
+      {/* Dashboard / Settings Panel */}
+      {showDashboard && (
+        <div style={styles.dashboard}>
+          <div style={styles.dashboardTitle}>Dashboard</div>
+
           <label style={styles.settingRow}>
             <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
             <span>Auto-speak replies</span>
           </label>
-          <button onClick={clearChat} style={styles.clearBtn}>
-            Clear conversation
+
+          <button onClick={newChat} style={styles.dashboardBtn}>
+            New Chat
+          </button>
+
+          <button onClick={() => setShowDashboard(false)} style={styles.closeBtn}>
+            Close
           </button>
         </div>
       )}
@@ -194,9 +184,7 @@ export default function Home() {
               ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
             }}
           >
-            {msg.image && (
-              <img src={msg.image} alt="upload" style={styles.image} />
-            )}
+            {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
             {msg.role === "assistant" ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
             ) : (
@@ -213,17 +201,15 @@ export default function Home() {
         <div ref={chatEnd} />
       </main>
 
-      {/* Image preview */}
+      {/* Image Preview */}
       {image && (
         <div style={styles.previewBar}>
           <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
-          <button onClick={() => setImage(null)} style={styles.removeBtn}>
-            ✕
-          </button>
+          <button onClick={() => setImage(null)} style={styles.removeBtn}>✕</button>
         </div>
       )}
 
-      {/* Input Area */}
+      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={styles.toolBtn}>
@@ -233,13 +219,7 @@ export default function Home() {
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>
             📷
           </button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImage}
-            hidden
-          />
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
 
           <input
             style={styles.input}
@@ -277,13 +257,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottom: "1px solid #1f1f1f",
-    background: "#0a0a0a"
+    borderBottom: "1px solid #1f1f1f"
   },
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 10
+    gap: 10,
+    cursor: "pointer"
   },
   logo: {
     fontSize: 20,
@@ -291,41 +271,53 @@ const styles = {
   },
   brandName: {
     fontSize: 17,
-    fontWeight: 600,
-    letterSpacing: "-0.2px"
+    fontWeight: 600
   },
-  headerActions: {
-    display: "flex",
-    gap: 8
+  newChatBtn: {
+    background: "#1a1a1a",
+    border: "1px solid #333",
+    color: "#e8e8e8",
+    padding: "7px 14px",
+    borderRadius: 20,
+    fontSize: 13,
+    cursor: "pointer"
   },
-  iconBtn: {
-    background: "transparent",
-    border: "none",
-    fontSize: 18,
-    cursor: "pointer",
-    color: "#a1a1a1"
-  },
-  settings: {
-    padding: "12px 16px",
+  dashboard: {
     background: "#111",
     borderBottom: "1px solid #1f1f1f",
+    padding: "16px",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center"
+    flexDirection: "column",
+    gap: 14
+  },
+  dashboardTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    marginBottom: 4
   },
   settingRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     fontSize: 14,
     color: "#ccc"
   },
-  clearBtn: {
+  dashboardBtn: {
+    background: "#1a1a1a",
+    border: "1px solid #333",
+    color: "white",
+    padding: "10px",
+    borderRadius: 10,
+    fontSize: 14,
+    cursor: "pointer",
+    textAlign: "left"
+  },
+  closeBtn: {
     background: "transparent",
     border: "1px solid #333",
-    color: "#f87171",
-    padding: "6px 12px",
-    borderRadius: 8,
+    color: "#aaa",
+    padding: "8px",
+    borderRadius: 10,
     fontSize: 13,
     cursor: "pointer"
   },
@@ -341,8 +333,7 @@ const styles = {
     maxWidth: "820px",
     width: "100%",
     lineHeight: 1.6,
-    fontSize: 15.5,
-    padding: "2px 0"
+    fontSize: 15.5
   },
   userBubble: {
     alignSelf: "flex-end",
@@ -353,8 +344,7 @@ const styles = {
     maxWidth: "80%"
   },
   assistantBubble: {
-    alignSelf: "flex-start",
-    color: "#e8e8e8"
+    alignSelf: "flex-start"
   },
   image: {
     maxWidth: "100%",
@@ -379,8 +369,7 @@ const styles = {
     cursor: "pointer"
   },
   footer: {
-    padding: "12px 16px 20px",
-    background: "#0a0a0a"
+    padding: "12px 16px 20px"
   },
   inputWrapper: {
     maxWidth: 820,
