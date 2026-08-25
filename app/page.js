@@ -11,6 +11,7 @@ export default function Home() {
   const [listening, setListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
 
   const chatEnd = useRef(null);
@@ -56,6 +57,7 @@ export default function Home() {
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowDashboard(false);
+    setShowSettings(false);
   }
 
   function toggleSpeak() {
@@ -154,42 +156,59 @@ export default function Home() {
         </button>
       </header>
 
-      {/* Dashboard Overlay */}
+      {/* Dashboard */}
       {showDashboard && (
-        <div style={styles.overlay} onClick={() => setShowDashboard(false)}>
+        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
-            {/* User / Brand Section */}
+            
+            {/* Top Brand */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
                 <div style={styles.userName}>Myralis</div>
-                <div style={styles.userSub}>AI Companion</div>
+                <div style={styles.userSub}>AI Model</div>
               </div>
             </div>
 
-            {/* Menu Items */}
-            <div style={styles.menuSection}>
-              <button onClick={newChat} style={styles.menuItem}>
-                <span>💬</span> New Chat
-              </button>
-
-              <label style={styles.menuItem}>
-                <input
-                  type="checkbox"
-                  checked={autoSpeak}
-                  onChange={toggleSpeak}
-                  style={{ marginRight: 10 }}
-                />
-                Auto-speak replies
-              </label>
+            {/* Search */}
+            <div style={styles.searchBox}>
+              <input
+                style={styles.searchInput}
+                placeholder="Search chats..."
+                disabled
+              />
             </div>
 
-            {/* Footer */}
-            <div style={styles.dashboardFooter}>
-              <button onClick={() => setShowDashboard(false)} style={styles.closeBtn}>
-                Close
-              </button>
-            </div>
+            {/* New Chat */}
+            <button onClick={newChat} style={styles.menuItem}>
+              <span>💬</span> New Chat
+            </button>
+
+            {/* Spacer */}
+            <div style={{ flex: 1 }} />
+
+            {/* Settings Button at Bottom */}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              style={styles.menuItem}
+            >
+              <span>⚙️</span> Settings
+            </button>
+
+            {/* Settings Panel */}
+            {showSettings && (
+              <div style={styles.settingsPanel}>
+                <label style={styles.settingRow}>
+                  <input
+                    type="checkbox"
+                    checked={autoSpeak}
+                    onChange={toggleSpeak}
+                  />
+                  <span>Auto-speak replies</span>
+                </label>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -305,7 +324,7 @@ const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.6)",
+    background: "rgba(0,0,0,0.55)",
     zIndex: 50,
     display: "flex"
   },
@@ -322,9 +341,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 28,
-    paddingBottom: 16,
-    borderBottom: "1px solid #222"
+    marginBottom: 20
   },
   avatar: {
     width: 42,
@@ -346,11 +363,18 @@ const styles = {
     color: "#888",
     marginTop: 2
   },
-  menuSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    flex: 1
+  searchBox: {
+    marginBottom: 12
+  },
+  searchInput: {
+    width: "100%",
+    background: "#1a1a1a",
+    border: "1px solid #333",
+    borderRadius: 10,
+    padding: "10px 12px",
+    color: "#ccc",
+    fontSize: 14,
+    outline: "none"
   },
   menuItem: {
     display: "flex",
@@ -366,19 +390,18 @@ const styles = {
     textAlign: "left",
     width: "100%"
   },
-  dashboardFooter: {
-    borderTop: "1px solid #222",
-    paddingTop: 16
-  },
-  closeBtn: {
-    width: "100%",
+  settingsPanel: {
     background: "#1a1a1a",
-    border: "1px solid #333",
-    color: "#aaa",
-    padding: "12px",
     borderRadius: 10,
+    padding: "12px",
+    marginTop: 8
+  },
+  settingRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
     fontSize: 14,
-    cursor: "pointer"
+    color: "#ccc"
   },
   chat: {
     flex: 1,
