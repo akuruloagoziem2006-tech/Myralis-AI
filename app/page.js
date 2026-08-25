@@ -13,25 +13,18 @@ export default function Home() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
+  const [pastChats, setPastChats] = useState([]);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
-
-  // Simple past conversations (saved in localStorage)
-  const [pastChats, setPastChats] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("myralis_messages");
     const speak = localStorage.getItem("myralis_autoSpeak");
     const chats = localStorage.getItem("myralis_past_chats");
 
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
-      setMessages([
-        { role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }
-      ]);
-    }
+    if (saved) setMessages(JSON.parse(saved));
+    else setMessages([{ role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }]);
 
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
@@ -56,7 +49,6 @@ export default function Home() {
   }
 
   function newChat() {
-    // Save current chat to past chats if it has messages
     if (messages.length > 1) {
       const title = messages.find(m => m.role === "user")?.content?.slice(0, 40) || "New conversation";
       const updated = [{ id: Date.now(), title, messages }, ...pastChats].slice(0, 20);
@@ -64,9 +56,7 @@ export default function Home() {
       localStorage.setItem("myralis_past_chats", JSON.stringify(updated));
     }
 
-    const welcome = [
-      { role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }
-    ];
+    const welcome = [{ role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }];
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowDashboard(false);
@@ -126,12 +116,7 @@ export default function Home() {
     setLoading(true);
     window.speechSynthesis.cancel();
 
-    const newUserMsg = {
-      role: "user",
-      content: userMessage,
-      image: image || null
-    };
-
+    const newUserMsg = { role: "user", content: userMessage, image: image || null };
     setMessages((prev) => [...prev, newUserMsg]);
     setImage(null);
 
@@ -179,8 +164,6 @@ export default function Home() {
       {showDashboard && (
         <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
-            
-            {/* Top Brand */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
@@ -189,12 +172,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* New Chat */}
             <button onClick={newChat} style={styles.menuItem}>
               <span>✏️</span> New Chat
             </button>
 
-            {/* Past Conversations */}
             <div style={styles.sectionLabel}>Conversations</div>
             <div style={styles.chatList}>
               {pastChats.length === 0 && (
@@ -203,38 +184,23 @@ export default function Home() {
                 </div>
               )}
               {pastChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => loadChat(chat)}
-                  style={styles.chatItem}
-                >
+                <button key={chat.id} onClick={() => loadChat(chat)} style={styles.chatItem}>
                   {chat.title}
                 </button>
               ))}
             </div>
 
-            {/* Bottom Bar */}
             <div style={styles.bottomBar}>
-              <button style={styles.bottomBtn}>
-                🔍 Search
-              </button>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                style={styles.bottomBtn}
-              >
+              <button style={styles.bottomBtn}>🔍 Search</button>
+              <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
                 ⚙️
               </button>
             </div>
 
-            {/* Settings Panel */}
             {showSettings && (
               <div style={styles.settingsPanel}>
                 <label style={styles.settingRow}>
-                  <input
-                    type="checkbox"
-                    checked={autoSpeak}
-                    onChange={toggleSpeak}
-                  />
+                  <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
                   <span>Auto-speak replies</span>
                 </label>
               </div>
@@ -245,29 +211,31 @@ export default function Home() {
 
       {/* Messages */}
       <main style={styles.chat}>
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.bubble,
-              ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
-            }}
-          >
-            {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
-            {msg.role === "assistant" ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-            ) : (
-              msg.content
-            )}
-          </div>
-        ))}
+        <div style={styles.chatInner}>
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              style={{
+                ...styles.bubble,
+                ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
+              }}
+            >
+              {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
+            </div>
+          ))}
 
-        {loading && (
-          <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.6 }}>
-            Thinking...
-          </div>
-        )}
-        <div ref={chatEnd} />
+          {loading && (
+            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.6 }}>
+              Thinking...
+            </div>
+          )}
+          <div ref={chatEnd} />
+        </div>
       </main>
 
       {/* Image Preview */}
@@ -278,13 +246,16 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input - Grok style buttons */}
+      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
-          <button onClick={startListening} style={{
-            ...styles.toolBtn,
-            background: listening ? "#3b82f6" : "transparent"
-          }}>
+          <button
+            onClick={startListening}
+            style={{
+              ...styles.toolBtn,
+              background: listening ? "#3b82f6" : "transparent"
+            }}
+          >
             {listening ? "●" : "🎙"}
           </button>
 
@@ -329,7 +300,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottom: "1px solid #1f1f1f"
+    borderBottom: "1px solid #1f1f1f",
+    flexShrink: 0
   },
   brand: {
     display: "flex",
@@ -362,7 +334,7 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: 290,
+    width: "min(290px, 85vw)",
     height: "100%",
     background: "#111",
     borderRight: "1px solid #222",
@@ -385,7 +357,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontSize: 18,
-    color: "white"
+    color: "white",
+    flexShrink: 0
   },
   userName: {
     fontSize: 16,
@@ -470,16 +443,20 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px 16px",
+    padding: "16px"
+  },
+  chatInner: {
+    maxWidth: 820,
+    margin: "0 auto",
     display: "flex",
     flexDirection: "column",
-    gap: 16
+    gap: 16,
+    width: "100%"
   },
   bubble: {
-    maxWidth: "820px",
-    width: "100%",
     lineHeight: 1.6,
-    fontSize: 15.5
+    fontSize: "clamp(14px, 2.5vw, 15.5px)",
+    width: "100%"
   },
   userBubble: {
     alignSelf: "flex-end",
@@ -487,10 +464,11 @@ const styles = {
     border: "1px solid #2a2a2a",
     borderRadius: 18,
     padding: "12px 16px",
-    maxWidth: "80%"
+    maxWidth: "min(85%, 520px)"
   },
   assistantBubble: {
-    alignSelf: "flex-start"
+    alignSelf: "flex-start",
+    maxWidth: "min(90%, 720px)"
   },
   image: {
     maxWidth: "100%",
@@ -515,7 +493,8 @@ const styles = {
     cursor: "pointer"
   },
   footer: {
-    padding: "12px 16px 20px"
+    padding: "12px 16px 20px",
+    flexShrink: 0
   },
   inputWrapper: {
     maxWidth: 820,
@@ -526,7 +505,7 @@ const styles = {
     background: "#1a1a1a",
     border: "1px solid #2a2a2a",
     borderRadius: 24,
-    padding: "8px 10px 8px 10px"
+    padding: "8px 10px"
   },
   toolBtn: {
     background: "transparent",
@@ -539,7 +518,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#aaa"
+    color: "#aaa",
+    flexShrink: 0
   },
   input: {
     flex: 1,
@@ -548,7 +528,8 @@ const styles = {
     color: "white",
     fontSize: 15,
     outline: "none",
-    padding: "8px 4px"
+    padding: "8px 4px",
+    minWidth: 0
   },
   sendBtn: {
     background: "#e8e8e8",
@@ -562,6 +543,7 @@ const styles = {
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    flexShrink: 0
   }
 };
