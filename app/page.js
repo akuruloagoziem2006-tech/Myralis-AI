@@ -17,9 +17,13 @@ export default function Home() {
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Simple past conversations (saved in localStorage)
+  const [pastChats, setPastChats] = useState([]);
+
   useEffect(() => {
     const saved = localStorage.getItem("myralis_messages");
     const speak = localStorage.getItem("myralis_autoSpeak");
+    const chats = localStorage.getItem("myralis_past_chats");
 
     if (saved) {
       setMessages(JSON.parse(saved));
@@ -30,6 +34,7 @@ export default function Home() {
     }
 
     if (speak !== null) setAutoSpeak(speak === "true");
+    if (chats) setPastChats(JSON.parse(chats));
   }, []);
 
   useEffect(() => {
@@ -51,6 +56,14 @@ export default function Home() {
   }
 
   function newChat() {
+    // Save current chat to past chats if it has messages
+    if (messages.length > 1) {
+      const title = messages.find(m => m.role === "user")?.content?.slice(0, 40) || "New conversation";
+      const updated = [{ id: Date.now(), title, messages }, ...pastChats].slice(0, 20);
+      setPastChats(updated);
+      localStorage.setItem("myralis_past_chats", JSON.stringify(updated));
+    }
+
     const welcome = [
       { role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }
     ];
@@ -58,6 +71,12 @@ export default function Home() {
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowDashboard(false);
     setShowSettings(false);
+  }
+
+  function loadChat(chat) {
+    setMessages(chat.messages);
+    localStorage.setItem("myralis_messages", JSON.stringify(chat.messages));
+    setShowDashboard(false);
   }
 
   function toggleSpeak() {
@@ -170,30 +189,42 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Search */}
-            <div style={styles.searchBox}>
-              <input
-                style={styles.searchInput}
-                placeholder="Search chats..."
-                disabled
-              />
-            </div>
-
             {/* New Chat */}
             <button onClick={newChat} style={styles.menuItem}>
-              <span>💬</span> New Chat
+              <span>✏️</span> New Chat
             </button>
 
-            {/* Spacer */}
-            <div style={{ flex: 1 }} />
+            {/* Past Conversations */}
+            <div style={styles.sectionLabel}>Conversations</div>
+            <div style={styles.chatList}>
+              {pastChats.length === 0 && (
+                <div style={{ color: "#666", fontSize: 13, padding: "8px 10px" }}>
+                  No past conversations yet
+                </div>
+              )}
+              {pastChats.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => loadChat(chat)}
+                  style={styles.chatItem}
+                >
+                  {chat.title}
+                </button>
+              ))}
+            </div>
 
-            {/* Settings Button at Bottom */}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              style={styles.menuItem}
-            >
-              <span>⚙️</span> Settings
-            </button>
+            {/* Bottom Bar */}
+            <div style={styles.bottomBar}>
+              <button style={styles.bottomBtn}>
+                🔍 Search
+              </button>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={styles.bottomBtn}
+              >
+                ⚙️
+              </button>
+            </div>
 
             {/* Settings Panel */}
             {showSettings && (
@@ -208,7 +239,6 @@ export default function Home() {
                 </label>
               </div>
             )}
-
           </div>
         </div>
       )}
@@ -248,15 +278,18 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input */}
+      {/* Input - Grok style buttons */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
-          <button onClick={startListening} style={styles.toolBtn}>
-            {listening ? "🔴" : "🎤"}
+          <button onClick={startListening} style={{
+            ...styles.toolBtn,
+            background: listening ? "#3b82f6" : "transparent"
+          }}>
+            {listening ? "●" : "🎙"}
           </button>
 
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>
-            📷
+            🖼
           </button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
 
@@ -329,7 +362,7 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: 280,
+    width: 290,
     height: "100%",
     background: "#111",
     borderRight: "1px solid #222",
@@ -363,19 +396,6 @@ const styles = {
     color: "#888",
     marginTop: 2
   },
-  searchBox: {
-    marginBottom: 12
-  },
-  searchInput: {
-    width: "100%",
-    background: "#1a1a1a",
-    border: "1px solid #333",
-    borderRadius: 10,
-    padding: "10px 12px",
-    color: "#ccc",
-    fontSize: 14,
-    outline: "none"
-  },
   menuItem: {
     display: "flex",
     alignItems: "center",
@@ -388,13 +408,57 @@ const styles = {
     fontSize: 15,
     cursor: "pointer",
     textAlign: "left",
-    width: "100%"
+    width: "100%",
+    marginBottom: 8
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: "#666",
+    margin: "16px 0 8px 10px",
+    fontWeight: 500
+  },
+  chatList: {
+    flex: 1,
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: 2
+  },
+  chatItem: {
+    background: "transparent",
+    border: "none",
+    color: "#ccc",
+    padding: "10px",
+    borderRadius: 8,
+    fontSize: 14,
+    cursor: "pointer",
+    textAlign: "left",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+  bottomBar: {
+    display: "flex",
+    gap: 8,
+    borderTop: "1px solid #222",
+    paddingTop: 14,
+    marginTop: 10
+  },
+  bottomBtn: {
+    flex: 1,
+    background: "#1a1a1a",
+    border: "1px solid #333",
+    color: "#ccc",
+    padding: "10px",
+    borderRadius: 10,
+    fontSize: 14,
+    cursor: "pointer"
   },
   settingsPanel: {
     background: "#1a1a1a",
     borderRadius: 10,
     padding: "12px",
-    marginTop: 8
+    marginTop: 10
   },
   settingRow: {
     display: "flex",
@@ -458,18 +522,23 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     background: "#1a1a1a",
     border: "1px solid #2a2a2a",
     borderRadius: 24,
-    padding: "8px 10px 8px 12px"
+    padding: "8px 10px 8px 10px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
     fontSize: 18,
     cursor: "pointer",
-    padding: "6px",
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     color: "#aaa"
   },
   input: {
