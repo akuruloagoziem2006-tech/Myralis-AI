@@ -17,6 +17,8 @@ export default function Home() {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState("");
   const [liked, setLiked] = useState({});
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameText, setRenameText] = useState("");
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -43,6 +45,11 @@ export default function Home() {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  function savePastChats(chats) {
+    setPastChats(chats);
+    localStorage.setItem("myralis_past_chats", JSON.stringify(chats));
+  }
+
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -54,9 +61,8 @@ export default function Home() {
   function newChat() {
     if (messages.length > 1) {
       const title = messages.find(m => m.role === "user")?.content?.slice(0, 40) || "New conversation";
-      const updated = [{ id: Date.now(), title, messages }, ...pastChats].slice(0, 20);
-      setPastChats(updated);
-      localStorage.setItem("myralis_past_chats", JSON.stringify(updated));
+      const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
+      savePastChats(updated);
     }
 
     const welcome = [{ role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }];
@@ -70,6 +76,35 @@ export default function Home() {
     setMessages(chat.messages);
     localStorage.setItem("myralis_messages", JSON.stringify(chat.messages));
     setShowDashboard(false);
+  }
+
+  function deleteChat(id) {
+    const updated = pastChats.filter(c => c.id !== id);
+    savePastChats(updated);
+  }
+
+  function togglePin(id) {
+    const updated = pastChats.map(c =>
+      c.id === id ? { ...c, pinned: !c.pinned } : c
+    );
+    // Keep pinned chats at the top
+    updated.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    savePastChats(updated);
+  }
+
+  function startRename(chat) {
+    setRenamingId(chat.id);
+    setRenameText(chat.title);
+  }
+
+  function saveRename(id) {
+    if (!renameText.trim()) return;
+    const updated = pastChats.map(c =>
+      c.id === id ? { ...c, title: renameText.trim() } : c
+    );
+    savePastChats(updated);
+    setRenamingId(null);
+    setRenameText("");
   }
 
   function toggleSpeak() {
@@ -87,7 +122,7 @@ export default function Home() {
       navigator.share({ text: text.replace(/[*#`_]/g, "") });
     } else {
       copyText(text);
-      alert("Copied to clipboard (sharing not supported)");
+      alert("Copied to clipboard");
     }
   }
 
@@ -105,12 +140,10 @@ export default function Home() {
   }
 
   function regenerate(index) {
-    // Find the user message before this assistant reply
     if (index === 0) return;
     const userMsg = messages[index - 1];
     if (userMsg.role !== "user") return;
 
-    // Remove the old assistant reply and resend
     const newMessages = messages.slice(0, index);
     setMessages(newMessages);
     setTimeout(() => sendMessageWithText(userMsg.content, newMessages), 100);
@@ -163,7 +196,6 @@ export default function Home() {
 
     const newUserMsg = { role: "user", content: userMessage, image: image || null };
     
-    // Only add user message if it's a new one
     let updatedMessages = currentMessages;
     if (currentMessages === messages) {
       updatedMessages = [...messages, newUserMsg];
@@ -198,9 +230,11 @@ export default function Home() {
     sendMessageWithText(input);
   }
 
+  // Sort: pinned first
+  const sortedChats = [...pastChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <span style={styles.logo}>✦</span>
@@ -209,9 +243,8 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
-      {/* Dashboard */}
       {showDashboard && (
-        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); }}>
+        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
@@ -227,13 +260,46 @@ export default function Home() {
 
             <div style={styles.sectionLabel}>Conversations</div>
             <div style={styles.chatList}>
-              {pastChats.length === 0 && (
-                <div style={{ color: "#666", fontSize: 13, padding: "8px 10px" }}>No past conversations yet</div>
+              {sortedChats.length === 0 && (
+                <div style={{ color: "#666", fontSize: 13, padding: "8px 10px" }}>
+                  No past conversations yet
+                </div>
               )}
-              {pastChats.map((chat) => (
-                <button key={chat.id} onClick={() => loadChat(chat)} style={styles.chatItem}>
-                  {chat.title}
-                </button>
+
+              {sortedChats.map((chat) => (
+                <div key={chat.id} style={styles.chatItemWrapper}>
+                  {renamingId === chat.id ? (
+                    <div style={{ display: "flex", gap: 6, padding: "6px 0" }}>
+                      <input
+                        value={renameText}
+                        onChange={(e) => setRenameText(e.target.value)}
+                        style={styles.renameInput}
+                        autoFocus
+                        onKeyDown={(e) => e.key === "Enter" && saveRename(chat.id)}
+                      />
+                      <button onClick={() => saveRename(chat.id)} style={styles.smallAction}>✓</button>
+                      <button onClick={() => setRenamingId(null)} style={styles.smallAction}>✕</button>
+                    </div>
+                  ) : (
+                    <>
+                      <button onClick={() => loadChat(chat)} style={styles.chatItem}>
+                        {chat.pinned && <span style={{ marginRight: 6 }}>📌</span>}
+                        {chat.title}
+                      </button>
+                      <div style={styles.chatActions}>
+                        <button onClick={() => togglePin(chat.id)} style={styles.chatActionBtn} title="Pin">
+                          {chat.pinned ? "📌" : "📍"}
+                        </button>
+                        <button onClick={() => startRename(chat)} style={styles.chatActionBtn} title="Rename">
+                          ✏️
+                        </button>
+                        <button onClick={() => deleteChat(chat.id)} style={styles.chatActionBtn} title="Delete">
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
 
@@ -254,7 +320,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Messages */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
@@ -281,13 +346,10 @@ export default function Home() {
                 ) : (
                   msg.role === "assistant" ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                  ) : (
-                    msg.content
-                  )
+                  ) : msg.content
                 )}
               </div>
 
-              {/* Action Buttons */}
               {editingIndex !== i && (
                 <div style={{
                   ...styles.actions,
@@ -328,7 +390,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Image Preview */}
       {image && (
         <div style={styles.previewBar}>
           <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
@@ -336,7 +397,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
@@ -413,7 +473,7 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: "min(290px, 85vw)",
+    width: "min(300px, 85vw)",
     height: "100%",
     background: "#111",
     borderRight: "1px solid #222",
@@ -467,9 +527,16 @@ const styles = {
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: 2
+    gap: 4
+  },
+  chatItemWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    group: "chat"
   },
   chatItem: {
+    flex: 1,
     background: "transparent",
     border: "none",
     color: "#ccc",
@@ -481,6 +548,40 @@ const styles = {
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis"
+  },
+  chatActions: {
+    display: "flex",
+    gap: 2,
+    opacity: 0.7
+  },
+  chatActionBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#888",
+    fontSize: 13,
+    cursor: "pointer",
+    padding: "4px 6px",
+    borderRadius: 4
+  },
+  renameInput: {
+    flex: 1,
+    background: "#1a1a1a",
+    border: "1px solid #333",
+    borderRadius: 6,
+    color: "white",
+    padding: "6px 8px",
+    fontSize: 13,
+    outline: "none"
+  },
+  smallAction: {
+    background: "#333",
+    border: "none",
+    color: "white",
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: 13
   },
   bottomBar: {
     display: "flex",
