@@ -19,6 +19,7 @@ export default function Home() {
   const [liked, setLiked] = useState({});
   const [renamingId, setRenamingId] = useState(null);
   const [renameText, setRenameText] = useState("");
+  const [memory, setMemory] = useState("");
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -27,10 +28,14 @@ export default function Home() {
     const saved = localStorage.getItem("myralis_messages");
     const speak = localStorage.getItem("myralis_autoSpeak");
     const chats = localStorage.getItem("myralis_past_chats");
+    const savedMemory = localStorage.getItem("myralis_memory");
+
     if (saved) setMessages(JSON.parse(saved));
-    else setMessages([{ role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }]);
+    else setMessages([{ role: "assistant", content: "Hello. I'm **Myralis**, your personal AI. How can I help you today?" }]);
+
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
+    if (savedMemory) setMemory(savedMemory);
   }, []);
 
   useEffect(() => {
@@ -40,6 +45,11 @@ export default function Home() {
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  function saveMemory(newMemory) {
+    setMemory(newMemory);
+    localStorage.setItem("myralis_memory", newMemory);
+  }
 
   function savePastChats(chats) {
     setPastChats(chats);
@@ -60,7 +70,7 @@ export default function Home() {
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcome = [{ role: "assistant", content: "Hello! I'm **Myralis**. How can I help you today?" }];
+    const welcome = [{ role: "assistant", content: "Hello. I'm **Myralis**, your personal AI. How can I help you today?" }];
     setMessages(welcome);
     localStorage.setItem("myralis_messages", JSON.stringify(welcome));
     setShowDashboard(false);
@@ -185,14 +195,23 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages })
+        body: JSON.stringify({ 
+          messages: updatedMessages,
+          memory: memory   // send current memory to the API
+        })
       });
       const data = await res.json();
+
       if (data.error) {
         setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
         if (autoSpeak) speak(data.reply);
+
+        // If the AI returned an updated memory, save it
+        if (data.updatedMemory) {
+          saveMemory(data.updatedMemory);
+        }
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Connection error." }]);
@@ -219,22 +238,22 @@ export default function Home() {
       {showDashboard && (
         <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
-            {/* Top section */}
-            <div style={styles.userSection}>
-              <div style={styles.avatar}>✦</div>
-              <div>
-                <div style={styles.userName}>Myralis</div>
-                <div style={styles.userSub}>AI Model</div>
+            <div style={{ flexShrink: 0 }}>
+              <div style={styles.userSection}>
+                <div style={styles.avatar}>✦</div>
+                <div>
+                  <div style={styles.userName}>Myralis</div>
+                  <div style={styles.userSub}>Personal AI</div>
+                </div>
               </div>
+
+              <button onClick={newChat} style={styles.menuItem}>
+                <span style={{ fontSize: 16 }}>✏️</span> New Chat
+              </button>
+
+              <div style={styles.sectionLabel}>Conversations</div>
             </div>
 
-            <button onClick={newChat} style={styles.menuItem}>
-              <span style={{ fontSize: 16 }}>✏️</span> New Chat
-            </button>
-
-            <div style={styles.sectionLabel}>Conversations</div>
-
-            {/* Scrollable conversations */}
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
                 <div style={{ color: "#555", fontSize: 13, padding: "10px" }}>No conversations yet</div>
@@ -264,7 +283,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Bottom fixed section - always visible */}
             <div style={styles.bottomSection}>
               {showSettings && (
                 <div style={styles.settingsPanel}>
@@ -272,9 +290,14 @@ export default function Home() {
                     <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
                     <span>Auto-speak replies</span>
                   </label>
+                  <div style={{ marginTop: 12, fontSize: 12, color: "#71717a" }}>
+                    <div style={{ marginBottom: 4 }}>Memory:</div>
+                    <div style={{ background: "#09090b", padding: 8, borderRadius: 6, maxHeight: 80, overflowY: "auto", fontSize: 12 }}>
+                      {memory || "Nothing saved yet"}
+                    </div>
+                  </div>
                 </div>
               )}
-
               <div style={styles.bottomBar}>
                 <button style={styles.bottomBtn}>🔍 Search</button>
                 <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
@@ -386,21 +409,22 @@ export default function Home() {
 const styles = {
   page: {
     height: "100dvh",
+    maxHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
     background: "#09090b",
     color: "#e4e4e7",
-    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    overflow: "hidden"
   },
   header: {
-    height: 60,
-    padding: "0 20px",
+    height: 56,
+    padding: "0 16px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     borderBottom: "1px solid #1c1c1f",
-    background: "rgba(9,9,11,0.85)",
-    backdropFilter: "blur(12px)",
+    background: "#09090b",
     flexShrink: 0
   },
   brand: {
@@ -410,27 +434,23 @@ const styles = {
     cursor: "pointer"
   },
   logoMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 16,
+    fontSize: 15,
     color: "white",
     fontWeight: 600
   },
-  brandName: {
-    fontSize: 17,
-    fontWeight: 600,
-    letterSpacing: "-0.3px"
-  },
+  brandName: { fontSize: 16, fontWeight: 600 },
   newChatBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#e4e4e7",
-    padding: "8px 16px",
+    padding: "7px 14px",
     borderRadius: 20,
     fontSize: 13,
     fontWeight: 500,
@@ -444,33 +464,32 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: "min(300px, 85vw)",
+    width: "min(290px, 82vw)",
     height: "100%",
     background: "#0f0f12",
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "24px 18px 16px"
+    padding: "20px 14px 12px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 20,
-    flexShrink: 0
+    marginBottom: 16
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 18,
+    fontSize: 17,
     color: "white"
   },
-  userName: { fontSize: 16, fontWeight: 600 },
+  userName: { fontSize: 15, fontWeight: 600 },
   userSub: { fontSize: 12, color: "#71717a", marginTop: 2 },
   menuItem: {
     display: "flex",
@@ -479,31 +498,29 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "#d4d4d8",
-    padding: "12px 12px",
+    padding: "11px 10px",
     borderRadius: 10,
     fontSize: 14,
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
-    marginBottom: 8,
-    flexShrink: 0
+    marginBottom: 6
   },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
-    margin: "12px 0 8px 12px",
+    margin: "10px 0 6px 10px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    flexShrink: 0
+    letterSpacing: "0.4px"
   },
   chatList: {
     flex: 1,
     overflowY: "auto",
+    minHeight: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
-    minHeight: 0
+    gap: 2
   },
   chatItemWrapper: {
     display: "flex",
@@ -515,7 +532,7 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "#a1a1aa",
-    padding: "10px 12px",
+    padding: "9px 10px",
     borderRadius: 8,
     fontSize: 13,
     cursor: "pointer",
@@ -524,17 +541,14 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis"
   },
-  chatActions: {
-    display: "flex",
-    gap: 2
-  },
+  chatActions: { display: "flex", gap: 2 },
   chatActionBtn: {
     background: "transparent",
     border: "none",
     color: "#52525b",
     fontSize: 13,
     cursor: "pointer",
-    padding: "4px 6px",
+    padding: "4px 5px",
     borderRadius: 4
   },
   renameInput: {
@@ -543,7 +557,7 @@ const styles = {
     border: "1px solid #27272a",
     borderRadius: 8,
     color: "white",
-    padding: "7px 10px",
+    padding: "6px 8px",
     fontSize: 13,
     outline: "none"
   },
@@ -551,28 +565,25 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     cursor: "pointer",
     fontSize: 13
   },
   bottomSection: {
     flexShrink: 0,
-    paddingTop: 12,
+    paddingTop: 10,
     borderTop: "1px solid #1c1c1f",
     marginTop: 8
   },
-  bottomBar: {
-    display: "flex",
-    gap: 8
-  },
+  bottomBar: { display: "flex", gap: 8 },
   bottomBtn: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#a1a1aa",
-    padding: "12px 10px",
+    padding: "11px 8px",
     borderRadius: 10,
     fontSize: 13,
     cursor: "pointer",
@@ -581,7 +592,7 @@ const styles = {
   settingsPanel: {
     background: "#18181b",
     borderRadius: 10,
-    padding: "14px",
+    padding: "12px",
     marginBottom: 10
   },
   settingRow: {
@@ -594,7 +605,8 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "24px 16px"
+    padding: "16px 14px",
+    minHeight: 0
   },
   chatInner: {
     maxWidth: 780,
@@ -604,7 +616,7 @@ const styles = {
     width: "100%"
   },
   bubble: {
-    lineHeight: 1.65,
+    lineHeight: 1.6,
     fontSize: 15,
     width: "100%"
   },
@@ -613,13 +625,13 @@ const styles = {
     background: "#18181b",
     border: "1px solid #27272a",
     borderRadius: 18,
-    padding: "12px 18px",
-    maxWidth: "min(80%, 460px)",
+    padding: "11px 16px",
+    maxWidth: "min(82%, 440px)",
     marginLeft: "auto"
   },
   assistantBubble: {
     alignSelf: "flex-start",
-    maxWidth: "min(92%, 700px)",
+    maxWidth: "min(94%, 700px)",
     color: "#e4e4e7"
   },
   image: {
@@ -630,7 +642,7 @@ const styles = {
   actions: {
     display: "flex",
     gap: 4,
-    marginTop: 6,
+    marginTop: 5,
     flexWrap: "wrap"
   },
   actionBtn: {
@@ -639,7 +651,7 @@ const styles = {
     color: "#52525b",
     fontSize: 12,
     cursor: "pointer",
-    padding: "4px 8px",
+    padding: "3px 7px",
     borderRadius: 6,
     fontWeight: 500
   },
@@ -674,12 +686,13 @@ const styles = {
     cursor: "pointer"
   },
   previewBar: {
-    padding: "10px 20px",
+    padding: "8px 16px",
     display: "flex",
     alignItems: "center",
     gap: 12,
     background: "#0f0f12",
-    borderTop: "1px solid #1c1c1f"
+    borderTop: "1px solid #1c1c1f",
+    flexShrink: 0
   },
   removeBtn: {
     background: "#27272a",
@@ -692,7 +705,7 @@ const styles = {
     fontSize: 13
   },
   footer: {
-    padding: "16px 20px 24px",
+    padding: "12px 14px 18px",
     flexShrink: 0
   },
   inputWrapper: {
@@ -703,17 +716,16 @@ const styles = {
     gap: 6,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 28,
-    padding: "8px 12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.25)"
+    borderRadius: 26,
+    padding: "7px 10px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
     fontSize: 17,
     cursor: "pointer",
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -728,17 +740,17 @@ const styles = {
     color: "white",
     fontSize: 15,
     outline: "none",
-    padding: "8px 6px",
+    padding: "7px 4px",
     minWidth: 0
   },
   sendBtn: {
     background: "#e4e4e7",
     color: "#09090b",
     border: "none",
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 600,
     cursor: "pointer",
     display: "flex",

@@ -1,30 +1,27 @@
 export async function POST(request) {
   try {
-    const { messages } = await request.json();
+    const { messages, memory } = await request.json();
 
     const systemPrompt = `You are Myralis, a highly intelligent personal AI assistant created specifically for your user.
 
 Your personality:
 - Loyal, calm, and highly competent (inspired by Jarvis)
-- Professional but not robotic
+- Professional but warm
 - Slightly witty when appropriate
 - Always focused on being genuinely helpful
-- Clear, concise, and insightful
 
-Your role:
-- Act as a personal AI companion and assistant
-- Help with learning, writing, planning, problem-solving, and everyday questions
-- Anticipate needs when possible and offer useful suggestions
-- Be honest when you don't know something
-- Protect the user's privacy and treat conversations as private
+Current Memory about the user:
+${memory || "No information saved yet."}
 
-Communication style:
-- Speak in a natural, confident, and respectful tone
-- Avoid being overly casual or overly formal
-- Keep responses clear and well-structured
-- Use markdown when it improves readability
+Instructions:
+- Use the memory above to personalize your responses.
+- If the user tells you something important to remember (name, preferences, goals, facts about them), you should update the memory.
+- When you want to update the memory, end your reply with this exact format on a new line:
+  [[MEMORY]]updated memory text here[[/MEMORY]]
+- Keep the memory concise and useful.
+- Treat all conversations as private.
 
-You are not a generic chatbot. You are Myralis — the user's personal AI.`;
+Be clear, helpful, and personal.`;
 
     const contents = [];
 
@@ -80,8 +77,17 @@ You are not a generic chatbot. You are Myralis — the user's personal AI.`;
       );
     }
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
-    return Response.json({ reply });
+    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
+    let updatedMemory = null;
+
+    // Extract memory update if present
+    const memoryMatch = reply.match(/\[\[MEMORY\]\]([\s\S]*?)\[\[\/MEMORY\]\]/);
+    if (memoryMatch) {
+      updatedMemory = memoryMatch[1].trim();
+      reply = reply.replace(/\[\[MEMORY\]\][\s\S]*?\[\[\/MEMORY\]\]/, "").trim();
+    }
+
+    return Response.json({ reply, updatedMemory });
 
   } catch (error) {
     return Response.json({ error: "Server error" }, { status: 500 });
