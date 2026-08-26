@@ -1,63 +1,66 @@
 # Myralis AI
 
-A personal AI assistant app powered by the Google Gemini API.
+**Myralis** is a modern AI assistant powered by Google Gemini.  
+A clean, fast web app that works great on mobile and desktop.
 
-## Overview
+🌐 **Live Demo:** [https://myralis-ai.vercel.app](https://myralis-ai.vercel.app)
 
-Myralis AI is a lightweight, personal AI assistant built to run directly on an Android device via [Termux](https://termux.dev/). It uses Google's Gemini models as its backend for generating responses.
+---
 
 ## Features
 
-- Conversational AI assistant powered by Gemini
-- Runs entirely on-device through Termux — no separate server required
-- Simple, extensible architecture for adding new capabilities
+- Clean dark interface inspired by modern AI chat apps
+- Conversation memory (saved in the browser)
+- Speech-to-Text and Text-to-Speech
+- Image understanding (upload or camera)
+- Message actions: Edit, Copy, Share, Like, Regenerate
+- Past conversations with Pin, Rename, and Delete
+- Progressive Web App (PWA) — installable on home screen
+- Fully responsive (phone, tablet, and laptop)
+
+---
 
 ## Tech Stack
 
-- **Backend:** Google Gemini API (`gemini-2.5-flash-lite`)
-- **Runtime:** Termux (Android)
+- **Frontend:** Next.js 14 (App Router)
+- **AI:** Google Gemini API
+- **Deployment:** Vercel
+- **Markdown:** react-markdown + remark-gfm
+
+---
 
 ## Getting Started
 
-### Prerequisites
-
-- [Termux](https://termux.dev/) installed on your Android device
-- A Google Gemini API key ([get one here](https://ai.google.dev/))
-
-### Installation
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/akuruloagoziem2006-tech/myralis-ai.git
 cd myralis-ai
-```
-
-### Configuration
-
-Create a `.env` file in the project root (this file is git-ignored and should never be committed):
-
-```
+2. Install dependencies
+npm install
+3. Add your Gemini API Key
+Create a file named .env.local in the root folder:
 GEMINI_API_KEY=your_api_key_here
-```
-
-> **Note:** Never hardcode API keys directly in source files. Always load them from environment variables.
-
-### Running
-
-```bash
-# add your run command here, e.g.:
-python main.py
-```
-
-## Roadmap
-
-- [ ] Finish migrating hardcoded API key to environment variables
-- [ ] Additional feature ideas here
-
-## License
-
-Specify a license here (e.g. MIT).
-
-## Author
-
-Akurulo — [github.com/akuruloagoziem2006-tech](https://github.com/akuruloagoziem2006-tech)
-
+Get a free API key from Google AI Studio.
+4. Run locally
+npm run dev
+Open http://localhost:3000
+Deploy on Vercel
+Push the project to GitHub
+Import the repository on vercel.com
+Add the environment variable GEMINI_API_KEY
+Deploy
+Project Structure
+├── app/
+│   ├── api/chat/route.js     # Gemini API route
+│   ├── layout.js             # Root layout + PWA meta
+│   └── page.js               # Main chat interface
+├── public/
+│   ├── manifest.json         # PWA manifest
+│   └── icons/                # App icons
+└── package.json
+Author
+Akurulo Agoziem
+GitHub: akuruloagoziem2006-tech
+License
+MIT
