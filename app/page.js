@@ -32,8 +32,15 @@ export default function Home() {
     const chats = localStorage.getItem("myralis_past_chats");
     const savedMemory = localStorage.getItem("myralis_memory");
 
-    if (saved) setMessages(JSON.parse(saved));
-    else setMessages([{ role: "assistant", content: "Hello. I'm **Myralis**, your personal AI. How can I help you today?" }]);
+    if (saved) {
+      setMessages(JSON.parse(saved));
+    } else {
+      // Smarter Welcome
+      const welcome = savedMemory
+        ? `Hello. I've loaded what I remember about you.\n\nHow can I assist you today?`
+        : `Hello. I'm **Myralis**, your personal AI.\n\nYou can tell me things to remember, or just ask me anything.`;
+      setMessages([{ role: "assistant", content: welcome }]);
+    }
 
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
@@ -62,7 +69,8 @@ export default function Home() {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
-    utterance.rate = 1;
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
   }
 
@@ -72,9 +80,14 @@ export default function Home() {
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcome = [{ role: "assistant", content: "Hello. I'm **Myralis**, your personal AI. How can I help you today?" }];
-    setMessages(welcome);
-    localStorage.setItem("myralis_messages", JSON.stringify(welcome));
+
+    const welcome = memory
+      ? `Hello. Ready when you are.`
+      : `Hello. I'm **Myralis**, your personal AI. How can I help?`;
+
+    const welcomeMsg = [{ role: "assistant", content: welcome }];
+    setMessages(welcomeMsg);
+    localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
     setShowDashboard(false);
     setShowSettings(false);
   }
@@ -178,6 +191,17 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
+  // Quick Actions
+  function runQuickAction(action) {
+    const prompts = {
+      "plan": "Help me plan my day. Ask me what I need to get done.",
+      "explain": "Explain the last topic we discussed in a simpler way.",
+      "summarize": "Summarize our recent conversation clearly.",
+      "ideas": "Give me 5 useful ideas or suggestions based on what you know about me."
+    };
+    sendMessageWithText(prompts[action]);
+  }
+
   async function sendMessageWithText(text, currentMessages = messages) {
     if ((!text.trim() && !image) || loading) return;
     const userMessage = text.trim() || "What do you see in this image?";
@@ -209,10 +233,7 @@ export default function Home() {
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
         if (autoSpeak) speak(data.reply);
-
-        if (data.updatedMemory) {
-          saveMemory(data.updatedMemory);
-        }
+        if (data.updatedMemory) saveMemory(data.updatedMemory);
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Connection error." }]);
@@ -228,6 +249,7 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
+      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✦</div>
@@ -236,24 +258,34 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
+      {/* Side Dashboard */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); setEditMemory(false); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
-            <div style={{ flexShrink: 0 }}>
-              <div style={styles.userSection}>
-                <div style={styles.avatar}>✦</div>
-                <div>
-                  <div style={styles.userName}>Myralis</div>
-                  <div style={styles.userSub}>Personal AI</div>
-                </div>
+            
+            {/* Profile */}
+            <div style={styles.userSection}>
+              <div style={styles.avatar}>✦</div>
+              <div>
+                <div style={styles.userName}>Myralis</div>
+                <div style={styles.userSub}>Personal AI Assistant</div>
               </div>
-
-              <button onClick={newChat} style={styles.menuItem}>
-                <span style={{ fontSize: 16 }}>✏️</span> New Chat
-              </button>
-
-              <div style={styles.sectionLabel}>Conversations</div>
             </div>
+
+            <button onClick={newChat} style={styles.menuItem}>
+              <span>✏️</span> New Chat
+            </button>
+
+            {/* Quick Actions */}
+            <div style={styles.sectionLabel}>Quick Actions</div>
+            <div style={styles.quickActions}>
+              <button onClick={() => { runQuickAction("plan"); setShowDashboard(false); }} style={styles.quickBtn}>📅 Plan my day</button>
+              <button onClick={() => { runQuickAction("explain"); setShowDashboard(false); }} style={styles.quickBtn}>💡 Explain simply</button>
+              <button onClick={() => { runQuickAction("summarize"); setShowDashboard(false); }} style={styles.quickBtn}>📝 Summarize</button>
+              <button onClick={() => { runQuickAction("ideas"); setShowDashboard(false); }} style={styles.quickBtn}>🚀 Ideas</button>
+            </div>
+
+            <div style={styles.sectionLabel}>Conversations</div>
 
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
@@ -284,6 +316,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Bottom */}
             <div style={styles.bottomSection}>
               {showSettings && (
                 <div style={styles.settingsPanel}>
@@ -296,26 +329,11 @@ export default function Home() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                       <span style={{ fontSize: 13, color: "#a1a1aa" }}>Memory</span>
                       {!editMemory ? (
-                        <button 
-                          onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} 
-                          style={styles.smallLink}
-                        >
-                          Edit
-                        </button>
+                        <button onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} style={styles.smallLink}>Edit</button>
                       ) : (
                         <div style={{ display: "flex", gap: 8 }}>
-                          <button 
-                            onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} 
-                            style={styles.smallLink}
-                          >
-                            Save
-                          </button>
-                          <button 
-                            onClick={() => setEditMemory(false)} 
-                            style={{ ...styles.smallLink, color: "#71717a" }}
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} style={styles.smallLink}>Save</button>
+                          <button onClick={() => setEditMemory(false)} style={{ ...styles.smallLink, color: "#71717a" }}>Cancel</button>
                         </div>
                       )}
                     </div>
@@ -326,11 +344,11 @@ export default function Home() {
                         onChange={(e) => setMemoryDraft(e.target.value)}
                         style={styles.memoryEdit}
                         rows={4}
-                        placeholder="Write what Myralis should remember about you..."
+                        placeholder="What should Myralis remember about you..."
                       />
                     ) : (
                       <div style={styles.memoryBox}>
-                        {memory || "Nothing saved yet. Tell Myralis things to remember."}
+                        {memory || "Nothing saved yet."}
                       </div>
                     )}
                   </div>
@@ -348,6 +366,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Messages */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
@@ -411,11 +430,12 @@ export default function Home() {
         </div>
       )}
 
+      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
             ...styles.toolBtn,
-            background: listening ? "rgba(59,130,246,0.2)" : "transparent",
+            background: listening ? "rgba(59,130,246,0.25)" : "transparent",
             color: listening ? "#60a5fa" : "#888"
           }}>
             {listening ? "●" : "🎙"}
@@ -503,7 +523,7 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: "min(290px, 82vw)",
+    width: "min(300px, 85vw)",
     height: "100%",
     background: "#0f0f12",
     borderRight: "1px solid #1c1c1f",
@@ -515,20 +535,20 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16
+    marginBottom: 18
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 17,
+    fontSize: 18,
     color: "white"
   },
-  userName: { fontSize: 15, fontWeight: 600 },
+  userName: { fontSize: 16, fontWeight: 600 },
   userSub: { fontSize: 12, color: "#71717a", marginTop: 2 },
   menuItem: {
     display: "flex",
@@ -543,15 +563,31 @@ const styles = {
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
-    marginBottom: 6
+    marginBottom: 4
   },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
-    margin: "10px 0 6px 10px",
+    margin: "14px 0 8px 4px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.4px"
+  },
+  quickActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 8,
+    marginBottom: 6
+  },
+  quickBtn: {
+    background: "#18181b",
+    border: "1px solid #27272a",
+    color: "#d4d4d8",
+    padding: "10px 8px",
+    borderRadius: 10,
+    fontSize: 12,
+    cursor: "pointer",
+    textAlign: "left"
   },
   chatList: {
     flex: 1,
@@ -655,7 +691,7 @@ const styles = {
     borderRadius: 8,
     fontSize: 12,
     color: "#a1a1aa",
-    maxHeight: 90,
+    maxHeight: 80,
     overflowY: "auto",
     lineHeight: 1.5,
     whiteSpace: "pre-wrap"
