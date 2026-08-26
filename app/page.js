@@ -20,6 +20,8 @@ export default function Home() {
   const [renamingId, setRenamingId] = useState(null);
   const [renameText, setRenameText] = useState("");
   const [memory, setMemory] = useState("");
+  const [editMemory, setEditMemory] = useState(false);
+  const [memoryDraft, setMemoryDraft] = useState("");
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -197,7 +199,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           messages: updatedMessages,
-          memory: memory   // send current memory to the API
+          memory: memory
         })
       });
       const data = await res.json();
@@ -208,7 +210,6 @@ export default function Home() {
         setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
         if (autoSpeak) speak(data.reply);
 
-        // If the AI returned an updated memory, save it
         if (data.updatedMemory) {
           saveMemory(data.updatedMemory);
         }
@@ -236,7 +237,7 @@ export default function Home() {
       </header>
 
       {showDashboard && (
-        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); }}>
+        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); setEditMemory(false); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             <div style={{ flexShrink: 0 }}>
               <div style={styles.userSection}>
@@ -290,14 +291,52 @@ export default function Home() {
                     <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
                     <span>Auto-speak replies</span>
                   </label>
-                  <div style={{ marginTop: 12, fontSize: 12, color: "#71717a" }}>
-                    <div style={{ marginBottom: 4 }}>Memory:</div>
-                    <div style={{ background: "#09090b", padding: 8, borderRadius: 6, maxHeight: 80, overflowY: "auto", fontSize: 12 }}>
-                      {memory || "Nothing saved yet"}
+
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, color: "#a1a1aa" }}>Memory</span>
+                      {!editMemory ? (
+                        <button 
+                          onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} 
+                          style={styles.smallLink}
+                        >
+                          Edit
+                        </button>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button 
+                            onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} 
+                            style={styles.smallLink}
+                          >
+                            Save
+                          </button>
+                          <button 
+                            onClick={() => setEditMemory(false)} 
+                            style={{ ...styles.smallLink, color: "#71717a" }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    {editMemory ? (
+                      <textarea
+                        value={memoryDraft}
+                        onChange={(e) => setMemoryDraft(e.target.value)}
+                        style={styles.memoryEdit}
+                        rows={4}
+                        placeholder="Write what Myralis should remember about you..."
+                      />
+                    ) : (
+                      <div style={styles.memoryBox}>
+                        {memory || "Nothing saved yet. Tell Myralis things to remember."}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
+
               <div style={styles.bottomBar}>
                 <button style={styles.bottomBtn}>🔍 Search</button>
                 <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
@@ -601,6 +640,37 @@ const styles = {
     gap: 10,
     fontSize: 13,
     color: "#d4d4d8"
+  },
+  smallLink: {
+    background: "transparent",
+    border: "none",
+    color: "#a78bfa",
+    fontSize: 12,
+    cursor: "pointer",
+    padding: 0
+  },
+  memoryBox: {
+    background: "#09090b",
+    padding: "10px",
+    borderRadius: 8,
+    fontSize: 12,
+    color: "#a1a1aa",
+    maxHeight: 90,
+    overflowY: "auto",
+    lineHeight: 1.5,
+    whiteSpace: "pre-wrap"
+  },
+  memoryEdit: {
+    width: "100%",
+    background: "#09090b",
+    border: "1px solid #27272a",
+    borderRadius: 8,
+    color: "#e4e4e7",
+    padding: "10px",
+    fontSize: 12,
+    resize: "vertical",
+    outline: "none",
+    fontFamily: "inherit"
   },
   chat: {
     flex: 1,
