@@ -208,7 +208,6 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✦</div>
@@ -217,10 +216,10 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
-      {/* Dashboard */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
+            {/* Top section */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
@@ -234,6 +233,8 @@ export default function Home() {
             </button>
 
             <div style={styles.sectionLabel}>Conversations</div>
+
+            {/* Scrollable conversations */}
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
                 <div style={{ color: "#555", fontSize: 13, padding: "10px" }}>No conversations yet</div>
@@ -263,24 +264,28 @@ export default function Home() {
               ))}
             </div>
 
-            <div style={styles.bottomBar}>
-              <button style={styles.bottomBtn}>🔍 Search</button>
-              <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>⚙️</button>
-            </div>
+            {/* Bottom fixed section - always visible */}
+            <div style={styles.bottomSection}>
+              {showSettings && (
+                <div style={styles.settingsPanel}>
+                  <label style={styles.settingRow}>
+                    <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
+                    <span>Auto-speak replies</span>
+                  </label>
+                </div>
+              )}
 
-            {showSettings && (
-              <div style={styles.settingsPanel}>
-                <label style={styles.settingRow}>
-                  <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
-                  <span>Auto-speak replies</span>
-                </label>
+              <div style={styles.bottomBar}>
+                <button style={styles.bottomBtn}>🔍 Search</button>
+                <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
+                  ⚙️ Settings
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Chat Area */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
@@ -331,9 +336,7 @@ export default function Home() {
           ))}
 
           {loading && (
-            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.6 }}>
-              Thinking...
-            </div>
+            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.6 }}>Thinking...</div>
           )}
           <div ref={chatEnd} />
         </div>
@@ -346,7 +349,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
@@ -356,10 +358,8 @@ export default function Home() {
           }}>
             {listening ? "●" : "🎙"}
           </button>
-
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
-
           <input
             style={styles.input}
             value={input}
@@ -367,7 +367,6 @@ export default function Home() {
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
             placeholder="Message Myralis..."
           />
-
           <button
             onClick={sendMessage}
             disabled={loading || (!input.trim() && !image)}
@@ -435,8 +434,7 @@ const styles = {
     borderRadius: 20,
     fontSize: 13,
     fontWeight: 500,
-    cursor: "pointer",
-    transition: "0.15s"
+    cursor: "pointer"
   },
   overlay: {
     position: "fixed",
@@ -452,13 +450,14 @@ const styles = {
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "24px 18px"
+    padding: "24px 18px 16px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 24
+    marginBottom: 20,
+    flexShrink: 0
   },
   avatar: {
     width: 44,
@@ -486,22 +485,25 @@ const styles = {
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
-    marginBottom: 6
+    marginBottom: 8,
+    flexShrink: 0
   },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
-    margin: "18px 0 8px 12px",
+    margin: "12px 0 8px 12px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.5px"
+    letterSpacing: "0.5px",
+    flexShrink: 0
   },
   chatList: {
     flex: 1,
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: 2
+    gap: 2,
+    minHeight: 0
   },
   chatItemWrapper: {
     display: "flex",
@@ -555,28 +557,32 @@ const styles = {
     cursor: "pointer",
     fontSize: 13
   },
+  bottomSection: {
+    flexShrink: 0,
+    paddingTop: 12,
+    borderTop: "1px solid #1c1c1f",
+    marginTop: 8
+  },
   bottomBar: {
     display: "flex",
-    gap: 8,
-    borderTop: "1px solid #1c1c1f",
-    paddingTop: 16,
-    marginTop: 12
+    gap: 8
   },
   bottomBtn: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#a1a1aa",
-    padding: "10px",
+    padding: "12px 10px",
     borderRadius: 10,
     fontSize: 13,
-    cursor: "pointer"
+    cursor: "pointer",
+    fontWeight: 500
   },
   settingsPanel: {
     background: "#18181b",
     borderRadius: 10,
     padding: "14px",
-    marginTop: 10
+    marginBottom: 10
   },
   settingRow: {
     display: "flex",
