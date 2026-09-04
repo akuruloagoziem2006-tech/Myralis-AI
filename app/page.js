@@ -36,8 +36,8 @@ export default function Home() {
       setMessages(JSON.parse(saved));
     } else {
       const welcome = savedMemory
-        ? `Hello. I've loaded what I remember about you.\n\nHow can I assist you today?`
-        : `Hello. I'm **Myralis**, your personal AI.\n\nYou can tell me things to remember, or just ask me anything.`;
+        ? `Hello. I've loaded what I know about you.\n\nHow can I help you today?`
+        : `Hello. I'm **Myralis**, your personal AI.\n\nTell me things to remember, or just ask me anything.`;
       setMessages([{ role: "assistant", content: welcome }]);
     }
 
@@ -67,8 +67,11 @@ export default function Home() {
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
-    utterance.rate = 0.95;
+    const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/\n+/g, ". ");
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = 0.92;
+    utterance.pitch = 1.0;
+    utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
   }
 
@@ -80,7 +83,7 @@ export default function Home() {
     }
     const welcome = memory
       ? `Hello. Ready when you are.`
-      : `Hello. I'm **Myralis**, your personal AI. How can I help?`;
+      : `Hello. I'm **Myralis**. How can I help?`;
     const welcomeMsg = [{ role: "assistant", content: welcome }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
@@ -162,17 +165,19 @@ export default function Home() {
 
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return alert("Speech recognition not supported.");
+    if (!SpeechRecognition) return alert("Speech recognition not supported on this device.");
     window.speechSynthesis.cancel();
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
+    recognition.continuous = false;
+
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
     recognition.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       setInput(transcript);
-      setTimeout(() => sendMessageWithText(transcript), 250);
+      setTimeout(() => sendMessageWithText(transcript), 200);
     };
     recognition.onerror = () => setListening(false);
     recognition.start();
@@ -188,10 +193,12 @@ export default function Home() {
 
   function runQuickAction(action) {
     const prompts = {
-      plan: "Help me plan my day. Ask me what I need to get done.",
-      explain: "Explain the last topic we discussed in a simpler way.",
-      summarize: "Summarize our recent conversation clearly.",
-      ideas: "Give me 5 useful ideas or suggestions based on what you know about me."
+      plan: "Help me plan my day. Ask me what important things I need to get done today.",
+      explain: "Explain the last topic we discussed in a very simple and clear way.",
+      summarize: "Summarize our recent conversation in a few clear points.",
+      ideas: "Based on what you know about me, give me 5 useful ideas or suggestions.",
+      focus: "Help me focus. Give me a short plan to stay productive for the next 2 hours.",
+      write: "Help me write something. Ask me what I need to write."
     };
     sendMessageWithText(prompts[action]);
   }
@@ -227,7 +234,7 @@ export default function Home() {
         if (data.updatedMemory) saveMemory(data.updatedMemory);
       }
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
     }
     setLoading(false);
   }
@@ -240,6 +247,7 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
+      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✦</div>
@@ -248,6 +256,7 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
+      {/* Side Menu */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => {
           setShowDashboard(false);
@@ -256,8 +265,6 @@ export default function Home() {
           setShowMemory(false);
         }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
-            
-            {/* Profile */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
@@ -270,18 +277,18 @@ export default function Home() {
               <span>✏️</span> New Chat
             </button>
 
-            {/* Quick Actions */}
             <div style={styles.sectionLabel}>Quick Actions</div>
             <div style={styles.quickActions}>
               <button onClick={() => { runQuickAction("plan"); setShowDashboard(false); }} style={styles.quickBtn}>📅 Plan my day</button>
+              <button onClick={() => { runQuickAction("focus"); setShowDashboard(false); }} style={styles.quickBtn}>🎯 Focus mode</button>
               <button onClick={() => { runQuickAction("explain"); setShowDashboard(false); }} style={styles.quickBtn}>💡 Explain simply</button>
               <button onClick={() => { runQuickAction("summarize"); setShowDashboard(false); }} style={styles.quickBtn}>📝 Summarize</button>
+              <button onClick={() => { runQuickAction("write"); setShowDashboard(false); }} style={styles.quickBtn}>✍️ Help me write</button>
               <button onClick={() => { runQuickAction("ideas"); setShowDashboard(false); }} style={styles.quickBtn}>🚀 Ideas</button>
             </div>
 
-            {/* Memory toggle */}
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
-              <span>🧠</span> Memory
+              <span>🧠</span> Memory & Settings
             </button>
 
             {showMemory && (
@@ -303,11 +310,11 @@ export default function Home() {
                     onChange={(e) => setMemoryDraft(e.target.value)}
                     style={styles.memoryEdit}
                     rows={3}
-                    placeholder="What should Myralis remember..."
+                    placeholder="Name, preferences, goals..."
                   />
                 ) : (
                   <div style={styles.memoryBox}>
-                    {memory || "Nothing saved yet."}
+                    {memory || "Nothing saved yet. Tell me things to remember."}
                   </div>
                 )}
                 <label style={{ ...styles.settingRow, marginTop: 10 }}>
@@ -318,7 +325,6 @@ export default function Home() {
             )}
 
             <div style={styles.sectionLabel}>Conversations</div>
-
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
                 <div style={{ color: "#555", fontSize: 13, padding: "6px" }}>No conversations yet</div>
@@ -357,10 +363,11 @@ export default function Home() {
         </div>
       )}
 
+      {/* Messages */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 16 }}>
+            <div key={i} style={{ marginBottom: 18 }}>
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
@@ -407,7 +414,7 @@ export default function Home() {
           ))}
 
           {loading && (
-            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.6 }}>Thinking...</div>
+            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.65 }}>Thinking...</div>
           )}
           <div ref={chatEnd} />
         </div>
@@ -415,11 +422,12 @@ export default function Home() {
 
       {image && (
         <div style={styles.previewBar}>
-          <img src={image} alt="preview" style={{ height: 46, borderRadius: 8 }} />
+          <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
           <button onClick={() => setImage(null)} style={styles.removeBtn}>✕</button>
         </div>
       )}
 
+      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
@@ -466,8 +474,8 @@ const styles = {
     overflow: "hidden"
   },
   header: {
-    height: 50,
-    padding: "0 12px",
+    height: 52,
+    padding: "0 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -478,32 +486,34 @@ const styles = {
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 9,
     cursor: "pointer"
   },
   logoMark: {
-    width: 27,
-    height: 27,
-    borderRadius: 7,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 13,
+    fontSize: 14,
     color: "white",
-    fontWeight: 700
+    fontWeight: 700,
+    boxShadow: "0 2px 10px rgba(124, 58, 237, 0.35)"
   },
   brandName: {
-    fontSize: 15,
-    fontWeight: 600
+    fontSize: 16,
+    fontWeight: 600,
+    letterSpacing: "-0.2px"
   },
   newChatBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#e4e4e7",
-    padding: "5px 12px",
-    borderRadius: 16,
-    fontSize: 12,
+    padding: "6px 13px",
+    borderRadius: 18,
+    fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
   },
@@ -515,112 +525,112 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: "min(280px, 83vw)",
+    width: "min(285px, 84vw)",
     height: "100%",
     background: "#0f0f12",
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "14px 11px 10px"
+    padding: "16px 12px 12px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 12
+    gap: 11,
+    marginBottom: 14
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 15,
+    fontSize: 16,
     color: "white"
   },
-  userName: { fontSize: 14, fontWeight: 600 },
+  userName: { fontSize: 15, fontWeight: 600 },
   userSub: { fontSize: 11, color: "#71717a", marginTop: 1 },
   menuItem: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 9,
     background: "transparent",
     border: "none",
     color: "#d4d4d8",
-    padding: "9px 8px",
-    borderRadius: 8,
-    fontSize: 13,
+    padding: "10px 9px",
+    borderRadius: 9,
+    fontSize: 14,
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
     marginBottom: 2
   },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#52525b",
-    margin: "10px 0 5px 3px",
+    margin: "12px 0 6px 3px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.3px"
+    letterSpacing: "0.4px"
   },
   quickActions: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 6,
-    marginBottom: 4
+    gap: 7,
+    marginBottom: 6
   },
   quickBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#d4d4d8",
-    padding: "8px 6px",
-    borderRadius: 8,
-    fontSize: 11,
+    padding: "9px 7px",
+    borderRadius: 9,
+    fontSize: 12,
     cursor: "pointer",
     textAlign: "left"
   },
   memoryPanel: {
     background: "#18181b",
-    borderRadius: 8,
-    padding: "10px",
+    borderRadius: 9,
+    padding: "11px",
     margin: "4px 0 8px"
   },
   settingRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    fontSize: 12,
+    gap: 9,
+    fontSize: 13,
     color: "#d4d4d8"
   },
   smallLink: {
     background: "transparent",
     border: "none",
     color: "#a78bfa",
-    fontSize: 11,
+    fontSize: 12,
     cursor: "pointer",
     padding: 0
   },
   memoryBox: {
     background: "#09090b",
-    padding: "7px",
-    borderRadius: 6,
-    fontSize: 11,
+    padding: "8px",
+    borderRadius: 7,
+    fontSize: 12,
     color: "#a1a1aa",
-    maxHeight: 60,
+    maxHeight: 70,
     overflowY: "auto",
-    lineHeight: 1.4,
+    lineHeight: 1.45,
     whiteSpace: "pre-wrap"
   },
   memoryEdit: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 6,
+    borderRadius: 7,
     color: "#e4e4e7",
-    padding: "7px",
-    fontSize: 11,
+    padding: "8px",
+    fontSize: 12,
     resize: "vertical",
     outline: "none",
     fontFamily: "inherit"
@@ -636,16 +646,16 @@ const styles = {
   chatItemWrapper: {
     display: "flex",
     alignItems: "center",
-    gap: 2
+    gap: 3
   },
   chatItem: {
     flex: 1,
     background: "transparent",
     border: "none",
     color: "#a1a1aa",
-    padding: "7px 8px",
-    borderRadius: 6,
-    fontSize: 12,
+    padding: "8px 9px",
+    borderRadius: 7,
+    fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
     whiteSpace: "nowrap",
@@ -657,18 +667,18 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "#52525b",
-    fontSize: 11,
+    fontSize: 12,
     cursor: "pointer",
-    padding: "2px 3px",
-    borderRadius: 3
+    padding: "3px 4px",
+    borderRadius: 4
   },
   renameInput: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 6,
+    borderRadius: 7,
     color: "white",
-    padding: "4px 6px",
+    padding: "5px 7px",
     fontSize: 12,
     outline: "none"
   },
@@ -676,16 +686,16 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 24,
-    height: 24,
-    borderRadius: 5,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     cursor: "pointer",
-    fontSize: 11
+    fontSize: 12
   },
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "10px 11px",
+    padding: "14px 13px",
     minHeight: 0
   },
   chatInner: {
@@ -696,53 +706,53 @@ const styles = {
     width: "100%"
   },
   bubble: {
-    lineHeight: 1.5,
-    fontSize: "clamp(13.5px, 2.5vw, 14.5px)",
+    lineHeight: 1.55,
+    fontSize: "clamp(14px, 2.5vw, 15px)",
     width: "100%"
   },
   userBubble: {
     alignSelf: "flex-end",
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 15,
-    padding: "9px 13px",
-    maxWidth: "min(82%, 400px)",
+    borderRadius: 16,
+    padding: "10px 15px",
+    maxWidth: "min(82%, 420px)",
     marginLeft: "auto"
   },
   assistantBubble: {
     alignSelf: "flex-start",
-    maxWidth: "min(94%, 660px)",
+    maxWidth: "min(94%, 680px)",
     color: "#e4e4e7"
   },
   image: {
     maxWidth: "100%",
-    borderRadius: 9,
-    marginBottom: 7
+    borderRadius: 10,
+    marginBottom: 8
   },
   actions: {
     display: "flex",
-    gap: 2,
-    marginTop: 3,
+    gap: 3,
+    marginTop: 4,
     flexWrap: "wrap"
   },
   actionBtn: {
     background: "transparent",
     border: "none",
     color: "#52525b",
-    fontSize: 11,
+    fontSize: 12,
     cursor: "pointer",
-    padding: "2px 5px",
-    borderRadius: 4,
+    padding: "3px 6px",
+    borderRadius: 5,
     fontWeight: 500
   },
   editArea: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 8,
+    borderRadius: 9,
     color: "white",
-    padding: 9,
-    fontSize: 13,
+    padding: 10,
+    fontSize: 14,
     resize: "vertical",
     outline: "none"
   },
@@ -750,9 +760,9 @@ const styles = {
     background: "#7c3aed",
     border: "none",
     color: "white",
-    padding: "5px 11px",
-    borderRadius: 6,
-    fontSize: 12,
+    padding: "6px 12px",
+    borderRadius: 7,
+    fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
   },
@@ -760,16 +770,16 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "#d4d4d8",
-    padding: "5px 11px",
-    borderRadius: 6,
-    fontSize: 12,
+    padding: "6px 12px",
+    borderRadius: 7,
+    fontSize: 13,
     cursor: "pointer"
   },
   previewBar: {
-    padding: "6px 12px",
+    padding: "7px 14px",
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 10,
     background: "#0f0f12",
     borderTop: "1px solid #1c1c1f",
     flexShrink: 0
@@ -778,14 +788,14 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderRadius: "50%",
     cursor: "pointer",
-    fontSize: 11
+    fontSize: 12
   },
   footer: {
-    padding: "8px 11px 12px",
+    padding: "10px 13px 14px",
     flexShrink: 0
   },
   inputWrapper: {
@@ -793,19 +803,19 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 22,
-    padding: "5px 8px"
+    borderRadius: 24,
+    padding: "6px 9px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
-    fontSize: 15,
+    fontSize: 16,
     cursor: "pointer",
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -818,19 +828,19 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "white",
-    fontSize: 14,
+    fontSize: 15,
     outline: "none",
-    padding: "5px 2px",
+    padding: "6px 3px",
     minWidth: 0
   },
   sendBtn: {
     background: "#e4e4e7",
     color: "#09090b",
     border: "none",
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: "50%",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     display: "flex",
