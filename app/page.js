@@ -241,7 +241,6 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✦</div>
@@ -250,7 +249,6 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
-      {/* Side Menu */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => {
           setShowDashboard(false);
@@ -260,7 +258,7 @@ export default function Home() {
         }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             
-            {/* Top Profile */}
+            {/* Profile */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
@@ -284,15 +282,14 @@ export default function Home() {
 
             <div style={styles.sectionLabel}>Conversations</div>
 
-            {/* Scrollable list */}
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
-                <div style={{ color: "#555", fontSize: 13, padding: "8px" }}>No conversations yet</div>
+                <div style={{ color: "#555", fontSize: 13, padding: "6px" }}>No conversations yet</div>
               )}
               {sortedChats.map((chat) => (
                 <div key={chat.id} style={styles.chatItemWrapper}>
                   {renamingId === chat.id ? (
-                    <div style={{ display: "flex", gap: 6, width: "100%" }}>
+                    <div style={{ display: "flex", gap: 5, width: "100%" }}>
                       <input
                         value={renameText}
                         onChange={(e) => setRenameText(e.target.value)}
@@ -306,7 +303,7 @@ export default function Home() {
                   ) : (
                     <>
                       <button onClick={() => loadChat(chat)} style={styles.chatItem}>
-                        {chat.pinned && <span style={{ marginRight: 5 }}>📌</span>}
+                        {chat.pinned && <span style={{ marginRight: 4 }}>📌</span>}
                         {chat.title}
                       </button>
                       <div style={styles.chatActions}>
@@ -320,7 +317,7 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Bottom - Search & Settings (raised) */}
+            {/* Bottom buttons - higher and safer */}
             <div style={styles.bottomSection}>
               {showSettings && (
                 <div style={styles.settingsPanel}>
@@ -329,13 +326,13 @@ export default function Home() {
                     <span>Auto-speak replies</span>
                   </label>
 
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: "#a1a1aa" }}>Memory</span>
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, color: "#a1a1aa" }}>Memory</span>
                       {!editMemory ? (
                         <button onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} style={styles.smallLink}>Edit</button>
                       ) : (
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 7 }}>
                           <button onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} style={styles.smallLink}>Save</button>
                           <button onClick={() => setEditMemory(false)} style={{ ...styles.smallLink, color: "#71717a" }}>Cancel</button>
                         </div>
@@ -370,11 +367,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Chat Area */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 18 }}>
+            <div key={i} style={{ marginBottom: 16 }}>
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
@@ -429,12 +425,11 @@ export default function Home() {
 
       {image && (
         <div style={styles.previewBar}>
-          <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
+          <img src={image} alt="preview" style={{ height: 46, borderRadius: 8 }} />
           <button onClick={() => setImage(null)} style={styles.removeBtn}>✕</button>
         </div>
       )}
 
-      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
@@ -481,8 +476,8 @@ const styles = {
     overflow: "hidden"
   },
   header: {
-    height: 52,
-    padding: "0 14px",
+    height: 50,
+    padding: "0 12px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -493,34 +488,32 @@ const styles = {
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 8,
     cursor: "pointer"
   },
   logoMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 27,
+    height: 27,
+    borderRadius: 7,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 14,
+    fontSize: 13,
     color: "white",
-    fontWeight: 700,
-    boxShadow: "0 2px 8px rgba(124, 58, 237, 0.35)"
+    fontWeight: 700
   },
   brandName: {
-    fontSize: 16,
-    fontWeight: 600,
-    letterSpacing: "-0.2px"
+    fontSize: 15,
+    fontWeight: 600
   },
   newChatBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#e4e4e7",
-    padding: "6px 13px",
-    borderRadius: 18,
-    fontSize: 13,
+    padding: "5px 12px",
+    borderRadius: 16,
+    fontSize: 12,
     fontWeight: 500,
     cursor: "pointer"
   },
@@ -532,70 +525,69 @@ const styles = {
     display: "flex"
   },
   dashboard: {
-    width: "min(285px, 84vw)",
+    width: "min(280px, 83vw)",
     height: "100%",
     background: "#0f0f12",
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "16px 12px 10px"
+    padding: "14px 11px 8px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
-    gap: 11,
-    marginBottom: 14
+    gap: 10,
+    marginBottom: 12
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 9,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 16,
-    color: "white",
-    boxShadow: "0 2px 8px rgba(124, 58, 237, 0.3)"
+    fontSize: 15,
+    color: "white"
   },
-  userName: { fontSize: 15, fontWeight: 600 },
+  userName: { fontSize: 14, fontWeight: 600 },
   userSub: { fontSize: 11, color: "#71717a", marginTop: 1 },
   menuItem: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 8,
     background: "transparent",
     border: "none",
     color: "#d4d4d8",
-    padding: "10px 9px",
-    borderRadius: 9,
-    fontSize: 14,
+    padding: "9px 8px",
+    borderRadius: 8,
+    fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
     marginBottom: 2
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#52525b",
-    margin: "12px 0 6px 4px",
+    margin: "10px 0 5px 3px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.4px"
+    letterSpacing: "0.3px"
   },
   quickActions: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 7,
-    marginBottom: 4
+    gap: 6,
+    marginBottom: 2
   },
   quickBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#d4d4d8",
-    padding: "9px 7px",
-    borderRadius: 9,
-    fontSize: 12,
+    padding: "8px 6px",
+    borderRadius: 8,
+    fontSize: 11,
     cursor: "pointer",
     textAlign: "left"
   },
@@ -610,16 +602,16 @@ const styles = {
   chatItemWrapper: {
     display: "flex",
     alignItems: "center",
-    gap: 3
+    gap: 2
   },
   chatItem: {
     flex: 1,
     background: "transparent",
     border: "none",
     color: "#a1a1aa",
-    padding: "8px 9px",
-    borderRadius: 7,
-    fontSize: 13,
+    padding: "7px 8px",
+    borderRadius: 6,
+    fontSize: 12,
     cursor: "pointer",
     textAlign: "left",
     whiteSpace: "nowrap",
@@ -631,18 +623,18 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "#52525b",
-    fontSize: 12,
+    fontSize: 11,
     cursor: "pointer",
-    padding: "3px 4px",
-    borderRadius: 4
+    padding: "2px 3px",
+    borderRadius: 3
   },
   renameInput: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 7,
+    borderRadius: 6,
     color: "white",
-    padding: "5px 7px",
+    padding: "4px 6px",
     fontSize: 12,
     outline: "none"
   },
@@ -650,73 +642,73 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 26,
-    height: 26,
-    borderRadius: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 5,
     cursor: "pointer",
-    fontSize: 12
+    fontSize: 11
   },
   bottomSection: {
     flexShrink: 0,
-    paddingTop: 8,
+    paddingTop: 6,
     borderTop: "1px solid #1c1c1f",
-    marginTop: 6
+    marginTop: 4
   },
   bottomBar: {
     display: "flex",
-    gap: 7
+    gap: 6
   },
   bottomBtn: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#a1a1aa",
-    padding: "10px 6px",
-    borderRadius: 9,
-    fontSize: 13,
+    padding: "9px 6px",
+    borderRadius: 8,
+    fontSize: 12,
     cursor: "pointer",
     fontWeight: 500
   },
   settingsPanel: {
     background: "#18181b",
-    borderRadius: 9,
-    padding: "11px",
-    marginBottom: 8
+    borderRadius: 8,
+    padding: "10px",
+    marginBottom: 7
   },
   settingRow: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
-    fontSize: 13,
+    gap: 8,
+    fontSize: 12,
     color: "#d4d4d8"
   },
   smallLink: {
     background: "transparent",
     border: "none",
     color: "#a78bfa",
-    fontSize: 12,
+    fontSize: 11,
     cursor: "pointer",
     padding: 0
   },
   memoryBox: {
     background: "#09090b",
-    padding: "8px",
-    borderRadius: 7,
-    fontSize: 12,
+    padding: "7px",
+    borderRadius: 6,
+    fontSize: 11,
     color: "#a1a1aa",
-    maxHeight: 70,
+    maxHeight: 60,
     overflowY: "auto",
-    lineHeight: 1.45,
+    lineHeight: 1.4,
     whiteSpace: "pre-wrap"
   },
   memoryEdit: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 7,
+    borderRadius: 6,
     color: "#e4e4e7",
-    padding: "8px",
-    fontSize: 12,
+    padding: "7px",
+    fontSize: 11,
     resize: "vertical",
     outline: "none",
     fontFamily: "inherit"
@@ -724,7 +716,7 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "12px 12px",
+    padding: "10px 11px",
     minHeight: 0
   },
   chatInner: {
@@ -735,53 +727,53 @@ const styles = {
     width: "100%"
   },
   bubble: {
-    lineHeight: 1.55,
-    fontSize: "clamp(14px, 2.6vw, 15px)",
+    lineHeight: 1.5,
+    fontSize: "clamp(13.5px, 2.5vw, 14.5px)",
     width: "100%"
   },
   userBubble: {
     alignSelf: "flex-end",
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 16,
-    padding: "10px 14px",
-    maxWidth: "min(82%, 420px)",
+    borderRadius: 15,
+    padding: "9px 13px",
+    maxWidth: "min(82%, 400px)",
     marginLeft: "auto"
   },
   assistantBubble: {
     alignSelf: "flex-start",
-    maxWidth: "min(94%, 680px)",
+    maxWidth: "min(94%, 660px)",
     color: "#e4e4e7"
   },
   image: {
     maxWidth: "100%",
-    borderRadius: 10,
-    marginBottom: 8
+    borderRadius: 9,
+    marginBottom: 7
   },
   actions: {
     display: "flex",
-    gap: 3,
-    marginTop: 4,
+    gap: 2,
+    marginTop: 3,
     flexWrap: "wrap"
   },
   actionBtn: {
     background: "transparent",
     border: "none",
     color: "#52525b",
-    fontSize: 12,
+    fontSize: 11,
     cursor: "pointer",
-    padding: "3px 6px",
-    borderRadius: 5,
+    padding: "2px 5px",
+    borderRadius: 4,
     fontWeight: 500
   },
   editArea: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 9,
+    borderRadius: 8,
     color: "white",
-    padding: 10,
-    fontSize: 14,
+    padding: 9,
+    fontSize: 13,
     resize: "vertical",
     outline: "none"
   },
@@ -789,9 +781,9 @@ const styles = {
     background: "#7c3aed",
     border: "none",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: 7,
-    fontSize: 13,
+    padding: "5px 11px",
+    borderRadius: 6,
+    fontSize: 12,
     fontWeight: 500,
     cursor: "pointer"
   },
@@ -799,16 +791,16 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "#d4d4d8",
-    padding: "6px 12px",
-    borderRadius: 7,
-    fontSize: 13,
+    padding: "5px 11px",
+    borderRadius: 6,
+    fontSize: 12,
     cursor: "pointer"
   },
   previewBar: {
-    padding: "7px 14px",
+    padding: "6px 12px",
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
     background: "#0f0f12",
     borderTop: "1px solid #1c1c1f",
     flexShrink: 0
@@ -817,14 +809,14 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 26,
-    height: 26,
+    width: 24,
+    height: 24,
     borderRadius: "50%",
     cursor: "pointer",
-    fontSize: 12
+    fontSize: 11
   },
   footer: {
-    padding: "10px 12px 14px",
+    padding: "8px 11px 12px",
     flexShrink: 0
   },
   inputWrapper: {
@@ -832,19 +824,19 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 24,
-    padding: "6px 9px"
+    borderRadius: 22,
+    padding: "5px 8px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
-    fontSize: 16,
+    fontSize: 15,
     cursor: "pointer",
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -857,19 +849,19 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "white",
-    fontSize: 15,
+    fontSize: 14,
     outline: "none",
-    padding: "6px 3px",
+    padding: "5px 2px",
     minWidth: 0
   },
   sendBtn: {
     background: "#e4e4e7",
     color: "#09090b",
     border: "none",
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: "50%",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     cursor: "pointer",
     display: "flex",
