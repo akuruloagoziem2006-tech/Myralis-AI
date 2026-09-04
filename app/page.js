@@ -35,7 +35,6 @@ export default function Home() {
     if (saved) {
       setMessages(JSON.parse(saved));
     } else {
-      // Smarter Welcome
       const welcome = savedMemory
         ? `Hello. I've loaded what I remember about you.\n\nHow can I assist you today?`
         : `Hello. I'm **Myralis**, your personal AI.\n\nYou can tell me things to remember, or just ask me anything.`;
@@ -70,7 +69,6 @@ export default function Home() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
     utterance.rate = 0.95;
-    utterance.pitch = 1;
     window.speechSynthesis.speak(utterance);
   }
 
@@ -80,11 +78,9 @@ export default function Home() {
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-
     const welcome = memory
       ? `Hello. Ready when you are.`
       : `Hello. I'm **Myralis**, your personal AI. How can I help?`;
-
     const welcomeMsg = [{ role: "assistant", content: welcome }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
@@ -191,13 +187,12 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  // Quick Actions
   function runQuickAction(action) {
     const prompts = {
-      "plan": "Help me plan my day. Ask me what I need to get done.",
-      "explain": "Explain the last topic we discussed in a simpler way.",
-      "summarize": "Summarize our recent conversation clearly.",
-      "ideas": "Give me 5 useful ideas or suggestions based on what you know about me."
+      plan: "Help me plan my day. Ask me what I need to get done.",
+      explain: "Explain the last topic we discussed in a simpler way.",
+      summarize: "Summarize our recent conversation clearly.",
+      ideas: "Give me 5 useful ideas or suggestions based on what you know about me."
     };
     sendMessageWithText(prompts[action]);
   }
@@ -221,10 +216,7 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          messages: updatedMessages,
-          memory: memory
-        })
+        body: JSON.stringify({ messages: updatedMessages, memory })
       });
       const data = await res.json();
 
@@ -258,17 +250,22 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
-      {/* Side Dashboard */}
+      {/* Side Menu */}
       {showDashboard && (
-        <div style={styles.overlay} onClick={() => { setShowDashboard(false); setShowSettings(false); setRenamingId(null); setEditMemory(false); }}>
+        <div style={styles.overlay} onClick={() => {
+          setShowDashboard(false);
+          setShowSettings(false);
+          setRenamingId(null);
+          setEditMemory(false);
+        }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             
-            {/* Profile */}
+            {/* Top Profile */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✦</div>
               <div>
                 <div style={styles.userName}>Myralis</div>
-                <div style={styles.userSub}>Personal AI Assistant</div>
+                <div style={styles.userSub}>Personal AI</div>
               </div>
             </div>
 
@@ -287,22 +284,29 @@ export default function Home() {
 
             <div style={styles.sectionLabel}>Conversations</div>
 
+            {/* Scrollable list */}
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
-                <div style={{ color: "#555", fontSize: 13, padding: "10px" }}>No conversations yet</div>
+                <div style={{ color: "#555", fontSize: 13, padding: "8px" }}>No conversations yet</div>
               )}
               {sortedChats.map((chat) => (
                 <div key={chat.id} style={styles.chatItemWrapper}>
                   {renamingId === chat.id ? (
                     <div style={{ display: "flex", gap: 6, width: "100%" }}>
-                      <input value={renameText} onChange={(e) => setRenameText(e.target.value)} style={styles.renameInput} autoFocus onKeyDown={(e) => e.key === "Enter" && saveRename(chat.id)} />
+                      <input
+                        value={renameText}
+                        onChange={(e) => setRenameText(e.target.value)}
+                        style={styles.renameInput}
+                        autoFocus
+                        onKeyDown={(e) => e.key === "Enter" && saveRename(chat.id)}
+                      />
                       <button onClick={() => saveRename(chat.id)} style={styles.smallAction}>✓</button>
                       <button onClick={() => setRenamingId(null)} style={styles.smallAction}>✕</button>
                     </div>
                   ) : (
                     <>
                       <button onClick={() => loadChat(chat)} style={styles.chatItem}>
-                        {chat.pinned && <span style={{ marginRight: 6 }}>📌</span>}
+                        {chat.pinned && <span style={{ marginRight: 5 }}>📌</span>}
                         {chat.title}
                       </button>
                       <div style={styles.chatActions}>
@@ -316,7 +320,7 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Bottom */}
+            {/* Bottom - Search & Settings (raised) */}
             <div style={styles.bottomSection}>
               {showSettings && (
                 <div style={styles.settingsPanel}>
@@ -325,7 +329,7 @@ export default function Home() {
                     <span>Auto-speak replies</span>
                   </label>
 
-                  <div style={{ marginTop: 14 }}>
+                  <div style={{ marginTop: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                       <span style={{ fontSize: 13, color: "#a1a1aa" }}>Memory</span>
                       {!editMemory ? (
@@ -343,8 +347,8 @@ export default function Home() {
                         value={memoryDraft}
                         onChange={(e) => setMemoryDraft(e.target.value)}
                         style={styles.memoryEdit}
-                        rows={4}
-                        placeholder="What should Myralis remember about you..."
+                        rows={3}
+                        placeholder="What should Myralis remember..."
                       />
                     ) : (
                       <div style={styles.memoryBox}>
@@ -366,11 +370,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* Messages */}
+      {/* Chat Area */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 20 }}>
+            <div key={i} style={{ marginBottom: 18 }}>
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
@@ -379,7 +383,7 @@ export default function Home() {
                 {editingIndex === i ? (
                   <div>
                     <textarea value={editText} onChange={(e) => setEditText(e.target.value)} style={styles.editArea} rows={3} />
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                       <button onClick={() => saveEdit(i)} style={styles.primaryBtn}>Save</button>
                       <button onClick={() => setEditingIndex(null)} style={styles.secondaryBtn}>Cancel</button>
                     </div>
@@ -425,7 +429,7 @@ export default function Home() {
 
       {image && (
         <div style={styles.previewBar}>
-          <img src={image} alt="preview" style={{ height: 52, borderRadius: 10 }} />
+          <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
           <button onClick={() => setImage(null)} style={styles.removeBtn}>✕</button>
         </div>
       )}
@@ -477,8 +481,8 @@ const styles = {
     overflow: "hidden"
   },
   header: {
-    height: 56,
-    padding: "0 16px",
+    height: 52,
+    padding: "0 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -489,28 +493,33 @@ const styles = {
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
     cursor: "pointer"
   },
   logoMark: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 15,
+    fontSize: 14,
     color: "white",
-    fontWeight: 600
+    fontWeight: 700,
+    boxShadow: "0 2px 8px rgba(124, 58, 237, 0.35)"
   },
-  brandName: { fontSize: 16, fontWeight: 600 },
+  brandName: {
+    fontSize: 16,
+    fontWeight: 600,
+    letterSpacing: "-0.2px"
+  },
   newChatBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#e4e4e7",
-    padding: "7px 14px",
-    borderRadius: 20,
+    padding: "6px 13px",
+    borderRadius: 18,
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
@@ -518,57 +527,58 @@ const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.6)",
+    background: "rgba(0,0,0,0.55)",
     zIndex: 50,
     display: "flex"
   },
   dashboard: {
-    width: "min(300px, 85vw)",
+    width: "min(285px, 84vw)",
     height: "100%",
     background: "#0f0f12",
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "20px 14px 12px"
+    padding: "16px 12px 10px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 18
+    gap: 11,
+    marginBottom: 14
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 18,
-    color: "white"
+    fontSize: 16,
+    color: "white",
+    boxShadow: "0 2px 8px rgba(124, 58, 237, 0.3)"
   },
-  userName: { fontSize: 16, fontWeight: 600 },
-  userSub: { fontSize: 12, color: "#71717a", marginTop: 2 },
+  userName: { fontSize: 15, fontWeight: 600 },
+  userSub: { fontSize: 11, color: "#71717a", marginTop: 1 },
   menuItem: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
     background: "transparent",
     border: "none",
     color: "#d4d4d8",
-    padding: "11px 10px",
-    borderRadius: 10,
+    padding: "10px 9px",
+    borderRadius: 9,
     fontSize: 14,
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
-    marginBottom: 4
+    marginBottom: 2
   },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
-    margin: "14px 0 8px 4px",
+    margin: "12px 0 6px 4px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.4px"
@@ -576,15 +586,15 @@ const styles = {
   quickActions: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 8,
-    marginBottom: 6
+    gap: 7,
+    marginBottom: 4
   },
   quickBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#d4d4d8",
-    padding: "10px 8px",
-    borderRadius: 10,
+    padding: "9px 7px",
+    borderRadius: 9,
     fontSize: 12,
     cursor: "pointer",
     textAlign: "left"
@@ -595,20 +605,20 @@ const styles = {
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 2
+    gap: 1
   },
   chatItemWrapper: {
     display: "flex",
     alignItems: "center",
-    gap: 4
+    gap: 3
   },
   chatItem: {
     flex: 1,
     background: "transparent",
     border: "none",
     color: "#a1a1aa",
-    padding: "9px 10px",
-    borderRadius: 8,
+    padding: "8px 9px",
+    borderRadius: 7,
     fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
@@ -616,64 +626,67 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis"
   },
-  chatActions: { display: "flex", gap: 2 },
+  chatActions: { display: "flex", gap: 1 },
   chatActionBtn: {
     background: "transparent",
     border: "none",
     color: "#52525b",
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
-    padding: "4px 5px",
+    padding: "3px 4px",
     borderRadius: 4
   },
   renameInput: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 8,
+    borderRadius: 7,
     color: "white",
-    padding: "6px 8px",
-    fontSize: 13,
+    padding: "5px 7px",
+    fontSize: 12,
     outline: "none"
   },
   smallAction: {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 28,
-    height: 28,
-    borderRadius: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     cursor: "pointer",
-    fontSize: 13
+    fontSize: 12
   },
   bottomSection: {
     flexShrink: 0,
-    paddingTop: 10,
+    paddingTop: 8,
     borderTop: "1px solid #1c1c1f",
-    marginTop: 8
+    marginTop: 6
   },
-  bottomBar: { display: "flex", gap: 8 },
+  bottomBar: {
+    display: "flex",
+    gap: 7
+  },
   bottomBtn: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#a1a1aa",
-    padding: "11px 8px",
-    borderRadius: 10,
+    padding: "10px 6px",
+    borderRadius: 9,
     fontSize: 13,
     cursor: "pointer",
     fontWeight: 500
   },
   settingsPanel: {
     background: "#18181b",
-    borderRadius: 10,
-    padding: "12px",
-    marginBottom: 10
+    borderRadius: 9,
+    padding: "11px",
+    marginBottom: 8
   },
   settingRow: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
     fontSize: 13,
     color: "#d4d4d8"
   },
@@ -687,22 +700,22 @@ const styles = {
   },
   memoryBox: {
     background: "#09090b",
-    padding: "10px",
-    borderRadius: 8,
+    padding: "8px",
+    borderRadius: 7,
     fontSize: 12,
     color: "#a1a1aa",
-    maxHeight: 80,
+    maxHeight: 70,
     overflowY: "auto",
-    lineHeight: 1.5,
+    lineHeight: 1.45,
     whiteSpace: "pre-wrap"
   },
   memoryEdit: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 8,
+    borderRadius: 7,
     color: "#e4e4e7",
-    padding: "10px",
+    padding: "8px",
     fontSize: 12,
     resize: "vertical",
     outline: "none",
@@ -711,7 +724,7 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "16px 14px",
+    padding: "12px 12px",
     minHeight: 0
   },
   chatInner: {
@@ -722,33 +735,33 @@ const styles = {
     width: "100%"
   },
   bubble: {
-    lineHeight: 1.6,
-    fontSize: 15,
+    lineHeight: 1.55,
+    fontSize: "clamp(14px, 2.6vw, 15px)",
     width: "100%"
   },
   userBubble: {
     alignSelf: "flex-end",
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 18,
-    padding: "11px 16px",
-    maxWidth: "min(82%, 440px)",
+    borderRadius: 16,
+    padding: "10px 14px",
+    maxWidth: "min(82%, 420px)",
     marginLeft: "auto"
   },
   assistantBubble: {
     alignSelf: "flex-start",
-    maxWidth: "min(94%, 700px)",
+    maxWidth: "min(94%, 680px)",
     color: "#e4e4e7"
   },
   image: {
     maxWidth: "100%",
-    borderRadius: 12,
-    marginBottom: 10
+    borderRadius: 10,
+    marginBottom: 8
   },
   actions: {
     display: "flex",
-    gap: 4,
-    marginTop: 5,
+    gap: 3,
+    marginTop: 4,
     flexWrap: "wrap"
   },
   actionBtn: {
@@ -757,17 +770,17 @@ const styles = {
     color: "#52525b",
     fontSize: 12,
     cursor: "pointer",
-    padding: "3px 7px",
-    borderRadius: 6,
+    padding: "3px 6px",
+    borderRadius: 5,
     fontWeight: 500
   },
   editArea: {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 10,
+    borderRadius: 9,
     color: "white",
-    padding: 12,
+    padding: 10,
     fontSize: 14,
     resize: "vertical",
     outline: "none"
@@ -776,8 +789,8 @@ const styles = {
     background: "#7c3aed",
     border: "none",
     color: "white",
-    padding: "7px 14px",
-    borderRadius: 8,
+    padding: "6px 12px",
+    borderRadius: 7,
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
@@ -786,16 +799,16 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "#d4d4d8",
-    padding: "7px 14px",
-    borderRadius: 8,
+    padding: "6px 12px",
+    borderRadius: 7,
     fontSize: 13,
     cursor: "pointer"
   },
   previewBar: {
-    padding: "8px 16px",
+    padding: "7px 14px",
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     background: "#0f0f12",
     borderTop: "1px solid #1c1c1f",
     flexShrink: 0
@@ -804,14 +817,14 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 28,
-    height: 28,
+    width: 26,
+    height: 26,
     borderRadius: "50%",
     cursor: "pointer",
-    fontSize: 13
+    fontSize: 12
   },
   footer: {
-    padding: "12px 14px 18px",
+    padding: "10px 12px 14px",
     flexShrink: 0
   },
   inputWrapper: {
@@ -819,19 +832,19 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 26,
-    padding: "7px 10px"
+    borderRadius: 24,
+    padding: "6px 9px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
-    fontSize: 17,
+    fontSize: 16,
     cursor: "pointer",
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -846,17 +859,17 @@ const styles = {
     color: "white",
     fontSize: 15,
     outline: "none",
-    padding: "7px 4px",
+    padding: "6px 3px",
     minWidth: 0
   },
   sendBtn: {
     background: "#e4e4e7",
     color: "#09090b",
     border: "none",
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: "50%",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     display: "flex",
