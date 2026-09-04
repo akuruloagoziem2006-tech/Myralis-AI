@@ -8,6 +8,7 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [thinkingSeconds, setThinkingSeconds] = useState(0);
   const [listening, setListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showDashboard, setShowDashboard] = useState(false);
@@ -25,6 +26,7 @@ export default function Home() {
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("myralis_messages");
@@ -54,6 +56,20 @@ export default function Home() {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Thinking timer
+  useEffect(() => {
+    if (loading) {
+      setThinkingSeconds(0);
+      timerRef.current = setInterval(() => {
+        setThinkingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+      setThinkingSeconds(0);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [loading]);
+
   function saveMemory(newMemory) {
     setMemory(newMemory);
     localStorage.setItem("myralis_memory", newMemory);
@@ -70,8 +86,6 @@ export default function Home() {
     const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/\n+/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.92;
-    utterance.pitch = 1.0;
-    utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
   }
 
@@ -165,13 +179,11 @@ export default function Home() {
 
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return alert("Speech recognition not supported on this device.");
+    if (!SpeechRecognition) return alert("Speech recognition not supported.");
     window.speechSynthesis.cancel();
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
-    recognition.continuous = false;
-
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
     recognition.onresult = (e) => {
@@ -234,7 +246,7 @@ export default function Home() {
         if (data.updatedMemory) saveMemory(data.updatedMemory);
       }
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Connection error." }]);
     }
     setLoading(false);
   }
@@ -247,7 +259,6 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✧</div>
@@ -256,7 +267,6 @@ export default function Home() {
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
 
-      {/* Side Menu */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => {
           setShowDashboard(false);
@@ -314,7 +324,7 @@ export default function Home() {
                   />
                 ) : (
                   <div style={styles.memoryBox}>
-                    {memory || "Nothing saved yet. Tell me things to remember."}
+                    {memory || "Nothing saved yet."}
                   </div>
                 )}
                 <label style={{ ...styles.settingRow, marginTop: 10 }}>
@@ -363,7 +373,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Messages */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
@@ -414,7 +423,9 @@ export default function Home() {
           ))}
 
           {loading && (
-            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.65 }}>Thinking...</div>
+            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.7 }}>
+              Thinking... {thinkingSeconds}s
+            </div>
           )}
           <div ref={chatEnd} />
         </div>
@@ -427,7 +438,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
@@ -497,15 +507,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 14,
+    fontSize: 15,
     color: "white",
-    fontWeight: 700,
-    boxShadow: "0 2px 10px rgba(124, 58, 237, 0.35)"
+    fontWeight: 700
   },
   brandName: {
     fontSize: 16,
-    fontWeight: 600,
-    letterSpacing: "-0.2px"
+    fontWeight: 600
   },
   newChatBtn: {
     background: "#18181b",
@@ -547,7 +555,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 16,
+    fontSize: 17,
     color: "white"
   },
   userName: { fontSize: 15, fontWeight: 600 },
