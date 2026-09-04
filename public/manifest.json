@@ -1,12 +1,12 @@
 {
   "name": "Myralis AI",
   "short_name": "Myralis",
-  "description": "Your helpful AI model for learning, writing, planning, and everyday questions.",
+  "description": "Your personal AI assistant",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",
-  "theme_color": "#7c3aed",
-  "orientation": "portrait-primary",
+  "theme_color": "#09090b",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/icons/icon-192.png",
