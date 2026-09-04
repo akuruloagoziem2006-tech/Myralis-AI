@@ -11,7 +11,6 @@ export default function Home() {
   const [listening, setListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [image, setImage] = useState(null);
   const [pastChats, setPastChats] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -22,6 +21,7 @@ export default function Home() {
   const [memory, setMemory] = useState("");
   const [editMemory, setEditMemory] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState("");
+  const [showMemory, setShowMemory] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -85,7 +85,6 @@ export default function Home() {
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
     setShowDashboard(false);
-    setShowSettings(false);
   }
 
   function loadChat(chat) {
@@ -252,9 +251,9 @@ export default function Home() {
       {showDashboard && (
         <div style={styles.overlay} onClick={() => {
           setShowDashboard(false);
-          setShowSettings(false);
           setRenamingId(null);
           setEditMemory(false);
+          setShowMemory(false);
         }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             
@@ -279,6 +278,44 @@ export default function Home() {
               <button onClick={() => { runQuickAction("summarize"); setShowDashboard(false); }} style={styles.quickBtn}>📝 Summarize</button>
               <button onClick={() => { runQuickAction("ideas"); setShowDashboard(false); }} style={styles.quickBtn}>🚀 Ideas</button>
             </div>
+
+            {/* Memory toggle */}
+            <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
+              <span>🧠</span> Memory
+            </button>
+
+            {showMemory && (
+              <div style={styles.memoryPanel}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: "#a1a1aa" }}>What I remember</span>
+                  {!editMemory ? (
+                    <button onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} style={styles.smallLink}>Edit</button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} style={styles.smallLink}>Save</button>
+                      <button onClick={() => setEditMemory(false)} style={{ ...styles.smallLink, color: "#71717a" }}>Cancel</button>
+                    </div>
+                  )}
+                </div>
+                {editMemory ? (
+                  <textarea
+                    value={memoryDraft}
+                    onChange={(e) => setMemoryDraft(e.target.value)}
+                    style={styles.memoryEdit}
+                    rows={3}
+                    placeholder="What should Myralis remember..."
+                  />
+                ) : (
+                  <div style={styles.memoryBox}>
+                    {memory || "Nothing saved yet."}
+                  </div>
+                )}
+                <label style={{ ...styles.settingRow, marginTop: 10 }}>
+                  <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
+                  <span>Auto-speak replies</span>
+                </label>
+              </div>
+            )}
 
             <div style={styles.sectionLabel}>Conversations</div>
 
@@ -315,53 +352,6 @@ export default function Home() {
                   )}
                 </div>
               ))}
-            </div>
-
-            {/* Bottom buttons - higher and safer */}
-            <div style={styles.bottomSection}>
-              {showSettings && (
-                <div style={styles.settingsPanel}>
-                  <label style={styles.settingRow}>
-                    <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
-                    <span>Auto-speak replies</span>
-                  </label>
-
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                      <span style={{ fontSize: 12, color: "#a1a1aa" }}>Memory</span>
-                      {!editMemory ? (
-                        <button onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} style={styles.smallLink}>Edit</button>
-                      ) : (
-                        <div style={{ display: "flex", gap: 7 }}>
-                          <button onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} style={styles.smallLink}>Save</button>
-                          <button onClick={() => setEditMemory(false)} style={{ ...styles.smallLink, color: "#71717a" }}>Cancel</button>
-                        </div>
-                      )}
-                    </div>
-
-                    {editMemory ? (
-                      <textarea
-                        value={memoryDraft}
-                        onChange={(e) => setMemoryDraft(e.target.value)}
-                        style={styles.memoryEdit}
-                        rows={3}
-                        placeholder="What should Myralis remember..."
-                      />
-                    ) : (
-                      <div style={styles.memoryBox}>
-                        {memory || "Nothing saved yet."}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div style={styles.bottomBar}>
-                <button style={styles.bottomBtn}>🔍 Search</button>
-                <button onClick={() => setShowSettings(!showSettings)} style={styles.bottomBtn}>
-                  ⚙️ Settings
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -531,7 +521,7 @@ const styles = {
     borderRight: "1px solid #1c1c1f",
     display: "flex",
     flexDirection: "column",
-    padding: "14px 11px 8px"
+    padding: "14px 11px 10px"
   },
   userSection: {
     display: "flex",
@@ -579,7 +569,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: 6,
-    marginBottom: 2
+    marginBottom: 4
   },
   quickBtn: {
     background: "#18181b",
@@ -590,6 +580,50 @@ const styles = {
     fontSize: 11,
     cursor: "pointer",
     textAlign: "left"
+  },
+  memoryPanel: {
+    background: "#18181b",
+    borderRadius: 8,
+    padding: "10px",
+    margin: "4px 0 8px"
+  },
+  settingRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 12,
+    color: "#d4d4d8"
+  },
+  smallLink: {
+    background: "transparent",
+    border: "none",
+    color: "#a78bfa",
+    fontSize: 11,
+    cursor: "pointer",
+    padding: 0
+  },
+  memoryBox: {
+    background: "#09090b",
+    padding: "7px",
+    borderRadius: 6,
+    fontSize: 11,
+    color: "#a1a1aa",
+    maxHeight: 60,
+    overflowY: "auto",
+    lineHeight: 1.4,
+    whiteSpace: "pre-wrap"
+  },
+  memoryEdit: {
+    width: "100%",
+    background: "#09090b",
+    border: "1px solid #27272a",
+    borderRadius: 6,
+    color: "#e4e4e7",
+    padding: "7px",
+    fontSize: 11,
+    resize: "vertical",
+    outline: "none",
+    fontFamily: "inherit"
   },
   chatList: {
     flex: 1,
@@ -647,71 +681,6 @@ const styles = {
     borderRadius: 5,
     cursor: "pointer",
     fontSize: 11
-  },
-  bottomSection: {
-    flexShrink: 0,
-    paddingTop: 6,
-    borderTop: "1px solid #1c1c1f",
-    marginTop: 4
-  },
-  bottomBar: {
-    display: "flex",
-    gap: 6
-  },
-  bottomBtn: {
-    flex: 1,
-    background: "#18181b",
-    border: "1px solid #27272a",
-    color: "#a1a1aa",
-    padding: "9px 6px",
-    borderRadius: 8,
-    fontSize: 12,
-    cursor: "pointer",
-    fontWeight: 500
-  },
-  settingsPanel: {
-    background: "#18181b",
-    borderRadius: 8,
-    padding: "10px",
-    marginBottom: 7
-  },
-  settingRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 12,
-    color: "#d4d4d8"
-  },
-  smallLink: {
-    background: "transparent",
-    border: "none",
-    color: "#a78bfa",
-    fontSize: 11,
-    cursor: "pointer",
-    padding: 0
-  },
-  memoryBox: {
-    background: "#09090b",
-    padding: "7px",
-    borderRadius: 6,
-    fontSize: 11,
-    color: "#a1a1aa",
-    maxHeight: 60,
-    overflowY: "auto",
-    lineHeight: 1.4,
-    whiteSpace: "pre-wrap"
-  },
-  memoryEdit: {
-    width: "100%",
-    background: "#09090b",
-    border: "1px solid #27272a",
-    borderRadius: 6,
-    color: "#e4e4e7",
-    padding: "7px",
-    fontSize: 11,
-    resize: "vertical",
-    outline: "none",
-    fontFamily: "inherit"
   },
   chat: {
     flex: 1,
