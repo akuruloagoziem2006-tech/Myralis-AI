@@ -250,7 +250,7 @@ export default function Home() {
       {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
-          <div style={styles.logoMark}>✦</div>
+          <div style={styles.logoMark}>✧</div>
           <span style={styles.brandName}>Myralis</span>
         </div>
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
@@ -266,7 +266,7 @@ export default function Home() {
         }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.userSection}>
-              <div style={styles.avatar}>✦</div>
+              <div style={styles.avatar}>✧</div>
               <div>
                 <div style={styles.userName}>Myralis</div>
                 <div style={styles.userSub}>Personal AI</div>
@@ -493,7 +493,7 @@ const styles = {
     width: 28,
     height: 28,
     borderRadius: 8,
-    background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+    background: "linear-gradient(135deg, #8b5cf6, #06b6d4, #3b82f6)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -543,7 +543,7 @@ const styles = {
     width: 38,
     height: 38,
     borderRadius: 10,
-    background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+    background: "linear-gradient(135deg, #8b5cf6, #06b6d4, #3b82f6)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
