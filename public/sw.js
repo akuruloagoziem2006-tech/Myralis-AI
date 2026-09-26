@@ -1,38 +1,27 @@
-const CACHE_NAME = 'myralis-v1';
-const urlsToCache = [
-  '/',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
-];
+const CACHE_NAME = "myralis-v2";
+const ASSETS = ["/", "/manifest.json"];
 
-// Install service worker
-self.addEventListener('install', event => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
   );
 });
 
-// Fetch from cache
-self.addEventListener('fetch', event => {
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-  );
-});
-
-// Activate and clean old caches
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request).catch(() => {
+        if (event.request.mode === "navigate") return caches.match("/");
+      });
     })
   );
 });

@@ -23,12 +23,26 @@ export default function Home() {
   const [editMemory, setEditMemory] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState("");
   const [showMemory, setShowMemory] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
+    // Register service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
+    // Online / Offline detection
+    setIsOnline(navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+
+    // Load saved data
     const saved = localStorage.getItem("myralis_messages");
     const speak = localStorage.getItem("myralis_autoSpeak");
     const chats = localStorage.getItem("myralis_past_chats");
@@ -46,6 +60,11 @@ export default function Home() {
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
     if (savedMemory) setMemory(savedMemory);
+
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -56,13 +75,10 @@ export default function Home() {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Thinking timer
   useEffect(() => {
     if (loading) {
       setThinkingSeconds(0);
-      timerRef.current = setInterval(() => {
-        setThinkingSeconds(prev => prev + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setThinkingSeconds((p) => p + 1), 1000);
     } else {
       clearInterval(timerRef.current);
       setThinkingSeconds(0);
@@ -91,13 +107,11 @@ export default function Home() {
 
   function newChat() {
     if (messages.length > 1) {
-      const title = messages.find(m => m.role === "user")?.content?.slice(0, 40) || "New conversation";
+      const title = messages.find((m) => m.role === "user")?.content?.slice(0, 40) || "New conversation";
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcome = memory
-      ? `Hello. Ready when you are.`
-      : `Hello. I'm **Myralis**. How can I help?`;
+    const welcome = memory ? `Hello. Ready when you are.` : `Hello. I'm **Myralis**. How can I help?`;
     const welcomeMsg = [{ role: "assistant", content: welcome }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
@@ -111,11 +125,11 @@ export default function Home() {
   }
 
   function deleteChat(id) {
-    savePastChats(pastChats.filter(c => c.id !== id));
+    savePastChats(pastChats.filter((c) => c.id !== id));
   }
 
   function togglePin(id) {
-    const updated = pastChats.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c);
+    const updated = pastChats.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c));
     updated.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
     savePastChats(updated);
   }
@@ -127,7 +141,7 @@ export default function Home() {
 
   function saveRename(id) {
     if (!renameText.trim()) return;
-    savePastChats(pastChats.map(c => c.id === id ? { ...c, title: renameText.trim() } : c));
+    savePastChats(pastChats.map((c) => (c.id === id ? { ...c, title: renameText.trim() } : c)));
     setRenamingId(null);
     setRenameText("");
   }
@@ -174,10 +188,14 @@ export default function Home() {
   }
 
   function toggleLike(index, value) {
-    setLiked(prev => ({ ...prev, [index]: value }));
+    setLiked((prev) => ({ ...prev, [index]: value }));
   }
 
   function startListening() {
+    if (!isOnline) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "You're offline. Voice input needs an internet connection." }]);
+      return;
+    }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
     window.speechSynthesis.cancel();
@@ -204,6 +222,11 @@ export default function Home() {
   }
 
   function runQuickAction(action) {
+    if (!isOnline) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "You're offline. Connect to the internet to use Quick Actions." }]);
+      setShowDashboard(false);
+      return;
+    }
     const prompts = {
       plan: "Help me plan my day. Ask me what important things I need to get done today.",
       explain: "Explain the last topic we discussed in a very simple and clear way.",
@@ -213,10 +236,24 @@ export default function Home() {
       write: "Help me write something. Ask me what I need to write."
     };
     sendMessageWithText(prompts[action]);
+    setShowDashboard(false);
   }
 
   async function sendMessageWithText(text, currentMessages = messages) {
     if ((!text.trim() && !image) || loading) return;
+
+    // Offline check
+    if (!isOnline) {
+      const offlineMsg = {
+        role: "assistant",
+        content: "You're currently **offline**.\n\nI can still show your past chats and memory, but I need an internet connection to answer new questions.\n\nPlease connect to the internet and try again."
+      };
+      setMessages((prev) => [...prev, { role: "user", content: text.trim() || "Image" }, offlineMsg]);
+      setInput("");
+      setImage(null);
+      return;
+    }
+
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
@@ -239,14 +276,14 @@ export default function Home() {
       const data = await res.json();
 
       if (data.error) {
-        setMessages(prev => [...prev, { role: "assistant", content: "Error: " + data.error }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: "Error: " + data.error }]);
       } else {
-        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
         if (autoSpeak) speak(data.reply);
         if (data.updatedMemory) saveMemory(data.updatedMemory);
       }
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error." }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Connection error. Please check your internet and try again." }]);
     }
     setLoading(false);
   }
@@ -262,7 +299,10 @@ export default function Home() {
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✧</div>
-          <span style={styles.brandName}>Myralis</span>
+          <div>
+            <span style={styles.brandName}>Myralis</span>
+            {!isOnline && <div style={styles.offlineBadge}>Offline</div>}
+          </div>
         </div>
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
       </header>
@@ -279,7 +319,7 @@ export default function Home() {
               <div style={styles.avatar}>✧</div>
               <div>
                 <div style={styles.userName}>Myralis</div>
-                <div style={styles.userSub}>Personal AI</div>
+                <div style={styles.userSub}>{isOnline ? "Personal AI • Online" : "Personal AI • Offline"}</div>
               </div>
             </div>
 
@@ -289,12 +329,12 @@ export default function Home() {
 
             <div style={styles.sectionLabel}>Quick Actions</div>
             <div style={styles.quickActions}>
-              <button onClick={() => { runQuickAction("plan"); setShowDashboard(false); }} style={styles.quickBtn}>📅 Plan my day</button>
-              <button onClick={() => { runQuickAction("focus"); setShowDashboard(false); }} style={styles.quickBtn}>🎯 Focus mode</button>
-              <button onClick={() => { runQuickAction("explain"); setShowDashboard(false); }} style={styles.quickBtn}>💡 Explain simply</button>
-              <button onClick={() => { runQuickAction("summarize"); setShowDashboard(false); }} style={styles.quickBtn}>📝 Summarize</button>
-              <button onClick={() => { runQuickAction("write"); setShowDashboard(false); }} style={styles.quickBtn}>✍️ Help me write</button>
-              <button onClick={() => { runQuickAction("ideas"); setShowDashboard(false); }} style={styles.quickBtn}>🚀 Ideas</button>
+              <button onClick={() => runQuickAction("plan")} style={styles.quickBtn}>📅 Plan my day</button>
+              <button onClick={() => runQuickAction("focus")} style={styles.quickBtn}>🎯 Focus mode</button>
+              <button onClick={() => runQuickAction("explain")} style={styles.quickBtn}>💡 Explain simply</button>
+              <button onClick={() => runQuickAction("summarize")} style={styles.quickBtn}>📝 Summarize</button>
+              <button onClick={() => runQuickAction("write")} style={styles.quickBtn}>✍️ Help me write</button>
+              <button onClick={() => runQuickAction("ideas")} style={styles.quickBtn}>🚀 Ideas</button>
             </div>
 
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
@@ -454,7 +494,7 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="Message Myralis..."
+            placeholder={isOnline ? "Message Myralis..." : "You're offline..."}
           />
           <button
             onClick={sendMessage}
@@ -514,6 +554,12 @@ const styles = {
   brandName: {
     fontSize: 16,
     fontWeight: 600
+  },
+  offlineBadge: {
+    fontSize: 10,
+    color: "#f87171",
+    fontWeight: 500,
+    marginTop: 1
   },
   newChatBtn: {
     background: "#18181b",
