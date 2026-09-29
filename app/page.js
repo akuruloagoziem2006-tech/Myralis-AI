@@ -31,7 +31,7 @@ export default function Home() {
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
-  const LOCAL_URL = "http://127.0.0.1:8765";
+  const LOCAL_URL = "http://10.191.226.147:8765";
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
