@@ -123,13 +123,14 @@ export default function Home() {
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/\n+/g, ". ");
+    const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/
++/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 0.92;
-    utterance.pitch = 0.9;
+    utterance.rate = 0.95;
+    utterance.pitch = 0.85;
+    utterance.volume = 1;
 
     const voices = window.speechSynthesis.getVoices();
-    // Prefer male English voices
     const maleVoice = voices.find(v =>
       /male|david|james|daniel|google uk english male|microsoft david|microsoft mark/i.test(v.name)
     ) || voices.find(v =>
