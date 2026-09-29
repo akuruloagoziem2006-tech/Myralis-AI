@@ -24,18 +24,20 @@ export default function Home() {
   const [memoryDraft, setMemoryDraft] = useState("");
   const [showMemory, setShowMemory] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [useLocal, setUseLocal] = useState(false); // Local AI mode
+  const [localStatus, setLocalStatus] = useState("unknown"); // online / offline / unknown
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
+  const LOCAL_URL = "http://127.0.0.1:8765";
+
   useEffect(() => {
-    // Register service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
-    // Online / Offline detection
     setIsOnline(navigator.onLine);
     const goOnline = () => setIsOnline(true);
     const goOffline = () => setIsOnline(false);
@@ -47,19 +49,23 @@ export default function Home() {
     const speak = localStorage.getItem("myralis_autoSpeak");
     const chats = localStorage.getItem("myralis_past_chats");
     const savedMemory = localStorage.getItem("myralis_memory");
+    const savedLocal = localStorage.getItem("myralis_use_local");
 
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
-      const welcome = savedMemory
-        ? `Hello. I've loaded what I know about you.\n\nHow can I help you today?`
-        : `Hello. I'm **Myralis**, your personal AI.\n\nTell me things to remember, or just ask me anything.`;
-      setMessages([{ role: "assistant", content: welcome }]);
+    if (saved) setMessages(JSON.parse(saved));
+    else {
+      setMessages([{
+        role: "assistant",
+        content: "Hello. I'm **Myralis**, your personal AI.\n\nI can use Gemini when online, or your local AI when offline."
+      }]);
     }
 
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
     if (savedMemory) setMemory(savedMemory);
+    if (savedLocal === "true") setUseLocal(true);
+
+    // Check local server
+    checkLocalServer();
 
     return () => {
       window.removeEventListener("online", goOnline);
@@ -86,6 +92,19 @@ export default function Home() {
     return () => clearInterval(timerRef.current);
   }, [loading]);
 
+  async function checkLocalServer() {
+    try {
+      const res = await fetch(`${LOCAL_URL}/status`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        setLocalStatus("online");
+        return true;
+      }
+    } catch {
+      setLocalStatus("offline");
+    }
+    return false;
+  }
+
   function saveMemory(newMemory) {
     setMemory(newMemory);
     localStorage.setItem("myralis_memory", newMemory);
@@ -94,6 +113,13 @@ export default function Home() {
   function savePastChats(chats) {
     setPastChats(chats);
     localStorage.setItem("myralis_past_chats", JSON.stringify(chats));
+  }
+
+  function toggleLocalMode() {
+    const newValue = !useLocal;
+    setUseLocal(newValue);
+    localStorage.setItem("myralis_use_local", newValue.toString());
+    if (newValue) checkLocalServer();
   }
 
   function speak(text) {
@@ -111,8 +137,12 @@ export default function Home() {
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcome = memory ? `Hello. Ready when you are.` : `Hello. I'm **Myralis**. How can I help?`;
-    const welcomeMsg = [{ role: "assistant", content: welcome }];
+    const welcomeMsg = [{
+      role: "assistant",
+      content: useLocal
+        ? "Local mode is on. I'm using your offline Myralis."
+        : "Hello. Ready when you are."
+    }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
     setShowDashboard(false);
@@ -192,10 +222,6 @@ export default function Home() {
   }
 
   function startListening() {
-    if (!isOnline) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "You're offline. Voice input needs an internet connection." }]);
-      return;
-    }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
     window.speechSynthesis.cancel();
@@ -221,38 +247,32 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  function runQuickAction(action) {
-    if (!isOnline) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "You're offline. Connect to the internet to use Quick Actions." }]);
-      setShowDashboard(false);
-      return;
-    }
-    const prompts = {
-      plan: "Help me plan my day. Ask me what important things I need to get done today.",
-      explain: "Explain the last topic we discussed in a very simple and clear way.",
-      summarize: "Summarize our recent conversation in a few clear points.",
-      ideas: "Based on what you know about me, give me 5 useful ideas or suggestions.",
-      focus: "Help me focus. Give me a short plan to stay productive for the next 2 hours.",
-      write: "Help me write something. Ask me what I need to write."
-    };
-    sendMessageWithText(prompts[action]);
-    setShowDashboard(false);
+  async function sendToLocal(message) {
+    const res = await fetch(`${LOCAL_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) throw new Error("Local server error");
+    const data = await res.json();
+    return data.reply;
+  }
+
+  async function sendToGemini(updatedMessages) {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: updatedMessages, memory })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (data.updatedMemory) saveMemory(data.updatedMemory);
+    return data.reply;
   }
 
   async function sendMessageWithText(text, currentMessages = messages) {
     if ((!text.trim() && !image) || loading) return;
-
-    // Offline check
-    if (!isOnline) {
-      const offlineMsg = {
-        role: "assistant",
-        content: "You're currently **offline**.\n\nI can still show your past chats and memory, but I need an internet connection to answer new questions.\n\nPlease connect to the internet and try again."
-      };
-      setMessages((prev) => [...prev, { role: "user", content: text.trim() || "Image" }, offlineMsg]);
-      setInput("");
-      setImage(null);
-      return;
-    }
 
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
@@ -260,31 +280,50 @@ export default function Home() {
     window.speechSynthesis.cancel();
 
     const newUserMsg = { role: "user", content: userMessage, image: image || null };
-    let updatedMessages = currentMessages;
-    if (currentMessages === messages) {
-      updatedMessages = [...messages, newUserMsg];
-      setMessages(updatedMessages);
-    }
+    let updatedMessages = currentMessages === messages ? [...messages, newUserMsg] : currentMessages;
+    if (currentMessages === messages) setMessages(updatedMessages);
     setImage(null);
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages, memory })
-      });
-      const data = await res.json();
+      let reply = "";
 
-      if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: "Error: " + data.error }]);
+      // Decide which engine to use
+      const preferLocal = useLocal || !isOnline;
+
+      if (preferLocal) {
+        try {
+          reply = await sendToLocal(userMessage);
+          setLocalStatus("online");
+        } catch {
+          setLocalStatus("offline");
+          if (!isOnline) {
+            reply = "You're offline and the **local Myralis server** is not running.\n\nTo use offline mode:\n1. Open Termux\n2. Run: `python myralis_server.py`\n3. Try again";
+          } else {
+            // Fallback to Gemini if local fails but we are online
+            reply = await sendToGemini(updatedMessages);
+          }
+        }
       } else {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-        if (autoSpeak) speak(data.reply);
-        if (data.updatedMemory) saveMemory(data.updatedMemory);
+        // Normal online Gemini
+        try {
+          reply = await sendToGemini(updatedMessages);
+        } catch (err) {
+          // If Gemini fails, try local as backup
+          try {
+            reply = await sendToLocal(userMessage);
+            setLocalStatus("online");
+          } catch {
+            reply = "Connection error. Please check your internet or start the local server.";
+          }
+        }
       }
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Connection error. Please check your internet and try again." }]);
+
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      if (autoSpeak) speak(reply);
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Please try again." }]);
     }
+
     setLoading(false);
   }
 
@@ -301,7 +340,17 @@ export default function Home() {
           <div style={styles.logoMark}>✧</div>
           <div>
             <span style={styles.brandName}>Myralis</span>
-            {!isOnline && <div style={styles.offlineBadge}>Offline</div>}
+            <div style={styles.statusLine}>
+              {useLocal ? (
+                <span style={{ color: localStatus === "online" ? "#4ade80" : "#f87171" }}>
+                  Local {localStatus === "online" ? "• Connected" : "• Not running"}
+                </span>
+              ) : (
+                <span style={{ color: isOnline ? "#4ade80" : "#f87171" }}>
+                  {isOnline ? "Online" : "Offline"}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
@@ -319,7 +368,7 @@ export default function Home() {
               <div style={styles.avatar}>✧</div>
               <div>
                 <div style={styles.userName}>Myralis</div>
-                <div style={styles.userSub}>{isOnline ? "Personal AI • Online" : "Personal AI • Offline"}</div>
+                <div style={styles.userSub}>Personal AI</div>
               </div>
             </div>
 
@@ -327,14 +376,38 @@ export default function Home() {
               <span>✏️</span> New Chat
             </button>
 
-            <div style={styles.sectionLabel}>Quick Actions</div>
-            <div style={styles.quickActions}>
-              <button onClick={() => runQuickAction("plan")} style={styles.quickBtn}>📅 Plan my day</button>
-              <button onClick={() => runQuickAction("focus")} style={styles.quickBtn}>🎯 Focus mode</button>
-              <button onClick={() => runQuickAction("explain")} style={styles.quickBtn}>💡 Explain simply</button>
-              <button onClick={() => runQuickAction("summarize")} style={styles.quickBtn}>📝 Summarize</button>
-              <button onClick={() => runQuickAction("write")} style={styles.quickBtn}>✍️ Help me write</button>
-              <button onClick={() => runQuickAction("ideas")} style={styles.quickBtn}>🚀 Ideas</button>
+            {/* Local / Gemini toggle */}
+            <div style={styles.modeBox}>
+              <div style={{ fontSize: 13, marginBottom: 8, color: "#a1a1aa" }}>AI Engine</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => { setUseLocal(false); localStorage.setItem("myralis_use_local", "false"); }}
+                  style={{
+                    ...styles.modeBtn,
+                    background: !useLocal ? "#7c3aed" : "#18181b",
+                    borderColor: !useLocal ? "#7c3aed" : "#27272a"
+                  }}
+                >
+                  Gemini
+                </button>
+                <button
+                  onClick={toggleLocalMode}
+                  style={{
+                    ...styles.modeBtn,
+                    background: useLocal ? "#7c3aed" : "#18181b",
+                    borderColor: useLocal ? "#7c3aed" : "#27272a"
+                  }}
+                >
+                  Local AI
+                </button>
+              </div>
+              {useLocal && (
+                <div style={{ fontSize: 11, color: "#71717a", marginTop: 8 }}>
+                  {localStatus === "online"
+                    ? "Connected to your local Myralis server"
+                    : "Start server in Termux: python myralis_server.py"}
+                </div>
+              )}
             </div>
 
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
@@ -494,7 +567,7 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder={isOnline ? "Message Myralis..." : "You're offline..."}
+            placeholder={useLocal ? "Message Local Myralis..." : "Message Myralis..."}
           />
           <button
             onClick={sendMessage}
@@ -524,7 +597,7 @@ const styles = {
     overflow: "hidden"
   },
   header: {
-    height: 52,
+    height: 56,
     padding: "0 14px",
     display: "flex",
     alignItems: "center",
@@ -555,10 +628,8 @@ const styles = {
     fontSize: 16,
     fontWeight: 600
   },
-  offlineBadge: {
-    fontSize: 10,
-    color: "#f87171",
-    fontWeight: 500,
+  statusLine: {
+    fontSize: 11,
     marginTop: 1
   },
   newChatBtn: {
@@ -621,6 +692,21 @@ const styles = {
     width: "100%",
     marginBottom: 2
   },
+  modeBox: {
+    background: "#18181b",
+    borderRadius: 10,
+    padding: "12px",
+    margin: "8px 0 12px"
+  },
+  modeBtn: {
+    flex: 1,
+    border: "1px solid",
+    color: "white",
+    padding: "8px",
+    borderRadius: 8,
+    fontSize: 13,
+    cursor: "pointer"
+  },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
@@ -628,22 +714,6 @@ const styles = {
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.4px"
-  },
-  quickActions: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 7,
-    marginBottom: 6
-  },
-  quickBtn: {
-    background: "#18181b",
-    border: "1px solid #27272a",
-    color: "#d4d4d8",
-    padding: "9px 7px",
-    borderRadius: 9,
-    fontSize: 12,
-    cursor: "pointer",
-    textAlign: "left"
   },
   memoryPanel: {
     background: "#18181b",
