@@ -126,6 +126,19 @@ export default function Home() {
     const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/\n+/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.92;
+    utterance.pitch = 0.9;
+
+    const voices = window.speechSynthesis.getVoices();
+    // Prefer male English voices
+    const maleVoice = voices.find(v =>
+      /male|david|james|daniel|google uk english male|microsoft david|microsoft mark/i.test(v.name)
+    ) || voices.find(v =>
+      v.lang.startsWith("en") && /male/i.test(v.name)
+    ) || voices.find(v =>
+      v.lang.startsWith("en")
+    );
+
+    if (maleVoice) utterance.voice = maleVoice;
     window.speechSynthesis.speak(utterance);
   }
 
