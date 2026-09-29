@@ -24,8 +24,8 @@ export default function Home() {
   const [memoryDraft, setMemoryDraft] = useState("");
   const [showMemory, setShowMemory] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
-  const [useLocal, setUseLocal] = useState(false); // Local AI mode
-  const [localStatus, setLocalStatus] = useState("unknown"); // online / offline / unknown
+  const [useLocal, setUseLocal] = useState(false);
+  const [localStatus, setLocalStatus] = useState("unknown");
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -44,7 +44,6 @@ export default function Home() {
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
 
-    // Load saved data
     const saved = localStorage.getItem("myralis_messages");
     const speak = localStorage.getItem("myralis_autoSpeak");
     const chats = localStorage.getItem("myralis_past_chats");
@@ -55,7 +54,7 @@ export default function Home() {
     else {
       setMessages([{
         role: "assistant",
-        content: "Hello. I'm **Myralis**, your personal AI.\n\nI can use Gemini when online, or your local AI when offline."
+        content: "Hello. I'm **Myralis**, your personal AI.\n\nI can use **Gemini** when online, or your **Local AI** when offline."
       }]);
     }
 
@@ -64,7 +63,6 @@ export default function Home() {
     if (savedMemory) setMemory(savedMemory);
     if (savedLocal === "true") setUseLocal(true);
 
-    // Check local server
     checkLocalServer();
 
     return () => {
@@ -286,8 +284,6 @@ export default function Home() {
 
     try {
       let reply = "";
-
-      // Decide which engine to use
       const preferLocal = useLocal || !isOnline;
 
       if (preferLocal) {
@@ -299,28 +295,25 @@ export default function Home() {
           if (!isOnline) {
             reply = "You're offline and the **local Myralis server** is not running.\n\nTo use offline mode:\n1. Open Termux\n2. Run: `python myralis_server.py`\n3. Try again";
           } else {
-            // Fallback to Gemini if local fails but we are online
             reply = await sendToGemini(updatedMessages);
           }
         }
       } else {
-        // Normal online Gemini
         try {
           reply = await sendToGemini(updatedMessages);
-        } catch (err) {
-          // If Gemini fails, try local as backup
+        } catch {
           try {
             reply = await sendToLocal(userMessage);
             setLocalStatus("online");
           } catch {
-            reply = "Connection error. Please check your internet or start the local server.";
+            reply = "Connection error. Check your internet or start the local server.";
           }
         }
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       if (autoSpeak) speak(reply);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Please try again." }]);
     }
 
@@ -333,29 +326,29 @@ export default function Home() {
 
   const sortedChats = [...pastChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
+  const statusText = useLocal
+    ? (localStatus === "online" ? "Local • Connected" : "Local • Not running")
+    : (isOnline ? "Online" : "Offline");
+
+  const statusColor = useLocal
+    ? (localStatus === "online" ? "#4ade80" : "#f87171")
+    : (isOnline ? "#4ade80" : "#f87171");
+
   return (
     <div style={styles.page}>
+      {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✧</div>
           <div>
-            <span style={styles.brandName}>Myralis</span>
-            <div style={styles.statusLine}>
-              {useLocal ? (
-                <span style={{ color: localStatus === "online" ? "#4ade80" : "#f87171" }}>
-                  Local {localStatus === "online" ? "• Connected" : "• Not running"}
-                </span>
-              ) : (
-                <span style={{ color: isOnline ? "#4ade80" : "#f87171" }}>
-                  {isOnline ? "Online" : "Offline"}
-                </span>
-              )}
-            </div>
+            <div style={styles.brandName}>Myralis</div>
+            <div style={{ ...styles.statusLine, color: statusColor }}>{statusText}</div>
           </div>
         </div>
-        <button onClick={newChat} style={styles.newChatBtn}>+ New Chat</button>
+        <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
       </header>
 
+      {/* Side Menu */}
       {showDashboard && (
         <div style={styles.overlay} onClick={() => {
           setShowDashboard(false);
@@ -364,6 +357,7 @@ export default function Home() {
           setShowMemory(false);
         }}>
           <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
+            {/* Profile */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✧</div>
               <div>
@@ -373,19 +367,19 @@ export default function Home() {
             </div>
 
             <button onClick={newChat} style={styles.menuItem}>
-              <span>✏️</span> New Chat
+              <span style={styles.menuIcon}>✏️</span> New Chat
             </button>
 
-            {/* Local / Gemini toggle */}
+            {/* AI Engine Switch */}
             <div style={styles.modeBox}>
-              <div style={{ fontSize: 13, marginBottom: 8, color: "#a1a1aa" }}>AI Engine</div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={styles.modeLabel}>AI Engine</div>
+              <div style={styles.modeRow}>
                 <button
                   onClick={() => { setUseLocal(false); localStorage.setItem("myralis_use_local", "false"); }}
                   style={{
                     ...styles.modeBtn,
-                    background: !useLocal ? "#7c3aed" : "#18181b",
-                    borderColor: !useLocal ? "#7c3aed" : "#27272a"
+                    background: !useLocal ? "#7c3aed" : "transparent",
+                    borderColor: !useLocal ? "#7c3aed" : "#333"
                   }}
                 >
                   Gemini
@@ -394,34 +388,33 @@ export default function Home() {
                   onClick={toggleLocalMode}
                   style={{
                     ...styles.modeBtn,
-                    background: useLocal ? "#7c3aed" : "#18181b",
-                    borderColor: useLocal ? "#7c3aed" : "#27272a"
+                    background: useLocal ? "#7c3aed" : "transparent",
+                    borderColor: useLocal ? "#7c3aed" : "#333"
                   }}
                 >
                   Local AI
                 </button>
               </div>
-              {useLocal && (
-                <div style={{ fontSize: 11, color: "#71717a", marginTop: 8 }}>
-                  {localStatus === "online"
-                    ? "Connected to your local Myralis server"
-                    : "Start server in Termux: python myralis_server.py"}
-                </div>
-              )}
+              <div style={styles.modeHint}>
+                {useLocal
+                  ? (localStatus === "online" ? "Connected to your phone server" : "Run: python myralis_server.py")
+                  : "Uses Google Gemini when online"}
+              </div>
             </div>
 
+            {/* Memory */}
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
-              <span>🧠</span> Memory & Settings
+              <span style={styles.menuIcon}>🧠</span> Memory & Settings
             </button>
 
             {showMemory && (
               <div style={styles.memoryPanel}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: "#a1a1aa" }}>What I remember</span>
+                <div style={styles.memoryHeader}>
+                  <span>What I remember</span>
                   {!editMemory ? (
                     <button onClick={() => { setEditMemory(true); setMemoryDraft(memory); }} style={styles.smallLink}>Edit</button>
                   ) : (
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 10 }}>
                       <button onClick={() => { saveMemory(memoryDraft); setEditMemory(false); }} style={styles.smallLink}>Save</button>
                       <button onClick={() => setEditMemory(false)} style={{ ...styles.smallLink, color: "#71717a" }}>Cancel</button>
                     </div>
@@ -440,22 +433,23 @@ export default function Home() {
                     {memory || "Nothing saved yet."}
                   </div>
                 )}
-                <label style={{ ...styles.settingRow, marginTop: 10 }}>
+                <label style={styles.settingRow}>
                   <input type="checkbox" checked={autoSpeak} onChange={toggleSpeak} />
                   <span>Auto-speak replies</span>
                 </label>
               </div>
             )}
 
+            {/* Conversations */}
             <div style={styles.sectionLabel}>Conversations</div>
             <div style={styles.chatList}>
               {sortedChats.length === 0 && (
-                <div style={{ color: "#555", fontSize: 13, padding: "6px" }}>No conversations yet</div>
+                <div style={styles.emptyChats}>No conversations yet</div>
               )}
               {sortedChats.map((chat) => (
                 <div key={chat.id} style={styles.chatItemWrapper}>
                   {renamingId === chat.id ? (
-                    <div style={{ display: "flex", gap: 5, width: "100%" }}>
+                    <div style={styles.renameRow}>
                       <input
                         value={renameText}
                         onChange={(e) => setRenameText(e.target.value)}
@@ -469,7 +463,7 @@ export default function Home() {
                   ) : (
                     <>
                       <button onClick={() => loadChat(chat)} style={styles.chatItem}>
-                        {chat.pinned && <span style={{ marginRight: 4 }}>📌</span>}
+                        {chat.pinned && <span style={{ marginRight: 5 }}>📌</span>}
                         {chat.title}
                       </button>
                       <div style={styles.chatActions}>
@@ -486,10 +480,11 @@ export default function Home() {
         </div>
       )}
 
+      {/* Chat Area */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 18 }}>
+            <div key={i} style={styles.messageBlock}>
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
@@ -498,7 +493,7 @@ export default function Home() {
                 {editingIndex === i ? (
                   <div>
                     <textarea value={editText} onChange={(e) => setEditText(e.target.value)} style={styles.editArea} rows={3} />
-                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <div style={styles.editActions}>
                       <button onClick={() => saveEdit(i)} style={styles.primaryBtn}>Save</button>
                       <button onClick={() => setEditingIndex(null)} style={styles.secondaryBtn}>Cancel</button>
                     </div>
@@ -546,17 +541,18 @@ export default function Home() {
 
       {image && (
         <div style={styles.previewBar}>
-          <img src={image} alt="preview" style={{ height: 48, borderRadius: 8 }} />
+          <img src={image} alt="preview" style={styles.previewImage} />
           <button onClick={() => setImage(null)} style={styles.removeBtn}>✕</button>
         </div>
       )}
 
+      {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
           <button onClick={startListening} style={{
             ...styles.toolBtn,
-            background: listening ? "rgba(59,130,246,0.25)" : "transparent",
-            color: listening ? "#60a5fa" : "#888"
+            background: listening ? "rgba(96,165,250,0.2)" : "transparent",
+            color: listening ? "#60a5fa" : "#71717a"
           }}>
             {listening ? "●" : "🎙"}
           </button>
@@ -597,25 +593,25 @@ const styles = {
     overflow: "hidden"
   },
   header: {
-    height: 56,
+    height: 54,
     padding: "0 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottom: "1px solid #1c1c1f",
+    borderBottom: "1px solid #1a1a1e",
     background: "#09090b",
     flexShrink: 0
   },
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 10,
     cursor: "pointer"
   },
   logoMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     background: "linear-gradient(135deg, #8b5cf6, #06b6d4, #3b82f6)",
     display: "flex",
     alignItems: "center",
@@ -626,18 +622,20 @@ const styles = {
   },
   brandName: {
     fontSize: 16,
-    fontWeight: 600
+    fontWeight: 600,
+    lineHeight: 1.2
   },
   statusLine: {
     fontSize: 11,
-    marginTop: 1
+    marginTop: 1,
+    fontWeight: 500
   },
   newChatBtn: {
     background: "#18181b",
     border: "1px solid #27272a",
     color: "#e4e4e7",
-    padding: "6px 13px",
-    borderRadius: 18,
+    padding: "7px 14px",
+    borderRadius: 20,
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
@@ -645,29 +643,29 @@ const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.55)",
+    background: "rgba(0,0,0,0.6)",
     zIndex: 50,
     display: "flex"
   },
   dashboard: {
-    width: "min(285px, 84vw)",
+    width: "min(290px, 85vw)",
     height: "100%",
-    background: "#0f0f12",
-    borderRight: "1px solid #1c1c1f",
+    background: "#0c0c0f",
+    borderRight: "1px solid #1a1a1e",
     display: "flex",
     flexDirection: "column",
-    padding: "16px 12px 12px"
+    padding: "18px 14px 14px"
   },
   userSection: {
     display: "flex",
     alignItems: "center",
-    gap: 11,
-    marginBottom: 14
+    gap: 12,
+    marginBottom: 16
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     background: "linear-gradient(135deg, #8b5cf6, #06b6d4, #3b82f6)",
     display: "flex",
     alignItems: "center",
@@ -676,57 +674,86 @@ const styles = {
     color: "white"
   },
   userName: { fontSize: 15, fontWeight: 600 },
-  userSub: { fontSize: 11, color: "#71717a", marginTop: 1 },
+  userSub: { fontSize: 12, color: "#71717a", marginTop: 2 },
   menuItem: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 10,
     background: "transparent",
     border: "none",
     color: "#d4d4d8",
-    padding: "10px 9px",
-    borderRadius: 9,
+    padding: "11px 10px",
+    borderRadius: 10,
     fontSize: 14,
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
     marginBottom: 2
   },
+  menuIcon: { fontSize: 15, width: 20 },
   modeBox: {
-    background: "#18181b",
-    borderRadius: 10,
+    background: "#141417",
+    borderRadius: 12,
     padding: "12px",
-    margin: "8px 0 12px"
+    margin: "8px 0 12px",
+    border: "1px solid #1f1f23"
+  },
+  modeLabel: {
+    fontSize: 12,
+    color: "#a1a1aa",
+    marginBottom: 8,
+    fontWeight: 500
+  },
+  modeRow: {
+    display: "flex",
+    gap: 8
   },
   modeBtn: {
     flex: 1,
     border: "1px solid",
     color: "white",
-    padding: "8px",
-    borderRadius: 8,
+    padding: "9px 0",
+    borderRadius: 9,
     fontSize: 13,
+    fontWeight: 500,
     cursor: "pointer"
+  },
+  modeHint: {
+    fontSize: 11,
+    color: "#71717a",
+    marginTop: 8,
+    lineHeight: 1.4
   },
   sectionLabel: {
     fontSize: 11,
     color: "#52525b",
-    margin: "12px 0 6px 3px",
+    margin: "14px 0 6px 4px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.4px"
   },
   memoryPanel: {
-    background: "#18181b",
-    borderRadius: 9,
-    padding: "11px",
-    margin: "4px 0 8px"
+    background: "#141417",
+    borderRadius: 12,
+    padding: "12px",
+    margin: "4px 0 10px",
+    border: "1px solid #1f1f23"
+  },
+  memoryHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    fontSize: 12,
+    color: "#a1a1aa"
   },
   settingRow: {
     display: "flex",
     alignItems: "center",
     gap: 9,
     fontSize: 13,
-    color: "#d4d4d8"
+    color: "#d4d4d8",
+    marginTop: 10
   },
   smallLink: {
     background: "transparent",
@@ -737,23 +764,23 @@ const styles = {
     padding: 0
   },
   memoryBox: {
-    background: "#09090b",
-    padding: "8px",
-    borderRadius: 7,
+    background: "#0a0a0c",
+    padding: "9px",
+    borderRadius: 8,
     fontSize: 12,
     color: "#a1a1aa",
-    maxHeight: 70,
+    maxHeight: 72,
     overflowY: "auto",
     lineHeight: 1.45,
     whiteSpace: "pre-wrap"
   },
   memoryEdit: {
     width: "100%",
-    background: "#09090b",
+    background: "#0a0a0c",
     border: "1px solid #27272a",
-    borderRadius: 7,
+    borderRadius: 8,
     color: "#e4e4e7",
-    padding: "8px",
+    padding: "9px",
     fontSize: 12,
     resize: "vertical",
     outline: "none",
@@ -765,20 +792,25 @@ const styles = {
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 1
+    gap: 2
+  },
+  emptyChats: {
+    color: "#555",
+    fontSize: 13,
+    padding: "8px 6px"
   },
   chatItemWrapper: {
     display: "flex",
     alignItems: "center",
-    gap: 3
+    gap: 2
   },
   chatItem: {
     flex: 1,
     background: "transparent",
     border: "none",
     color: "#a1a1aa",
-    padding: "8px 9px",
-    borderRadius: 7,
+    padding: "9px 10px",
+    borderRadius: 8,
     fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
@@ -793,16 +825,22 @@ const styles = {
     color: "#52525b",
     fontSize: 12,
     cursor: "pointer",
-    padding: "3px 4px",
-    borderRadius: 4
+    padding: "4px 5px",
+    borderRadius: 5
+  },
+  renameRow: {
+    display: "flex",
+    gap: 5,
+    width: "100%",
+    alignItems: "center"
   },
   renameInput: {
     flex: 1,
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 7,
+    borderRadius: 8,
     color: "white",
-    padding: "5px 7px",
+    padding: "6px 8px",
     fontSize: 12,
     outline: "none"
   },
@@ -810,16 +848,16 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "white",
-    width: 26,
-    height: 26,
-    borderRadius: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     cursor: "pointer",
     fontSize: 12
   },
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "14px 13px",
+    padding: "16px 14px",
     minHeight: 0
   },
   chatInner: {
@@ -828,6 +866,9 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     width: "100%"
+  },
+  messageBlock: {
+    marginBottom: 20
   },
   bubble: {
     lineHeight: 1.55,
@@ -838,25 +879,25 @@ const styles = {
     alignSelf: "flex-end",
     background: "#18181b",
     border: "1px solid #27272a",
-    borderRadius: 16,
-    padding: "10px 15px",
-    maxWidth: "min(82%, 420px)",
+    borderRadius: 18,
+    padding: "11px 15px",
+    maxWidth: "min(85%, 420px)",
     marginLeft: "auto"
   },
   assistantBubble: {
     alignSelf: "flex-start",
-    maxWidth: "min(94%, 680px)",
+    maxWidth: "min(95%, 680px)",
     color: "#e4e4e7"
   },
   image: {
     maxWidth: "100%",
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 8
   },
   actions: {
     display: "flex",
-    gap: 3,
-    marginTop: 4,
+    gap: 2,
+    marginTop: 5,
     flexWrap: "wrap"
   },
   actionBtn: {
@@ -873,19 +914,24 @@ const styles = {
     width: "100%",
     background: "#09090b",
     border: "1px solid #27272a",
-    borderRadius: 9,
+    borderRadius: 10,
     color: "white",
     padding: 10,
     fontSize: 14,
     resize: "vertical",
     outline: "none"
   },
+  editActions: {
+    display: "flex",
+    gap: 8,
+    marginTop: 8
+  },
   primaryBtn: {
     background: "#7c3aed",
     border: "none",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: 7,
+    padding: "6px 13px",
+    borderRadius: 8,
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer"
@@ -894,19 +940,23 @@ const styles = {
     background: "#27272a",
     border: "none",
     color: "#d4d4d8",
-    padding: "6px 12px",
-    borderRadius: 7,
+    padding: "6px 13px",
+    borderRadius: 8,
     fontSize: 13,
     cursor: "pointer"
   },
   previewBar: {
-    padding: "7px 14px",
+    padding: "8px 14px",
     display: "flex",
     alignItems: "center",
     gap: 10,
-    background: "#0f0f12",
-    borderTop: "1px solid #1c1c1f",
+    background: "#0c0c0f",
+    borderTop: "1px solid #1a1a1e",
     flexShrink: 0
+  },
+  previewImage: {
+    height: 48,
+    borderRadius: 8
   },
   removeBtn: {
     background: "#27272a",
@@ -919,7 +969,7 @@ const styles = {
     fontSize: 12
   },
   footer: {
-    padding: "10px 13px 14px",
+    padding: "10px 14px 14px",
     flexShrink: 0
   },
   inputWrapper: {
@@ -927,19 +977,19 @@ const styles = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    background: "#18181b",
+    gap: 4,
+    background: "#141417",
     border: "1px solid #27272a",
-    borderRadius: 24,
-    padding: "6px 9px"
+    borderRadius: 26,
+    padding: "6px 8px"
   },
   toolBtn: {
     background: "transparent",
     border: "none",
     fontSize: 16,
     cursor: "pointer",
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -954,15 +1004,15 @@ const styles = {
     color: "white",
     fontSize: 15,
     outline: "none",
-    padding: "6px 3px",
+    padding: "7px 4px",
     minWidth: 0
   },
   sendBtn: {
     background: "#e4e4e7",
     color: "#09090b",
     border: "none",
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     fontSize: 16,
     fontWeight: 600,
