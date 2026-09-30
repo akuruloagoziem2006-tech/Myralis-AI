@@ -122,7 +122,7 @@ export default function Home() {
     if (newValue) checkLocalServer();
   }
 
-  function speak(text) {
+    function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/
