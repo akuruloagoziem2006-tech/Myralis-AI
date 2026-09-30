@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import VisionHUD from "./components/VisionHUD";
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -26,6 +27,7 @@ export default function Home() {
   const [isOnline, setIsOnline] = useState(true);
   const [useLocal, setUseLocal] = useState(false);
   const [localStatus, setLocalStatus] = useState("unknown");
+  const [showVision, setShowVision] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -334,9 +336,20 @@ export default function Home() {
     setLoading(false);
   }
 
+
+  async function handleVisionAnalyze(dataUrl, summary) {
+    const prompt = `You are Myralis Vision (Jarvis-style). Analyze this live camera frame.\nDetected objects: ${summary}.\nDescribe clearly what you see, important objects, and anything useful. Be concise.`;
+    setImage(dataUrl);
+    setInput(prompt);
+    setTimeout(() => {
+      sendMessageWithText(prompt);
+    }, 50);
+  }
+
   function sendMessage() {
     sendMessageWithText(input);
   }
+
 
   const sortedChats = [...pastChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
@@ -571,6 +584,7 @@ export default function Home() {
             {listening ? "●" : "🎙"}
           </button>
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
+          <button onClick={() => setShowVision(true)} style={styles.toolBtn} title="Vision">👁</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <input
             style={styles.input}
@@ -591,6 +605,13 @@ export default function Home() {
           </button>
         </div>
       </footer>
+    {showVision && (
+      <VisionHUD
+        isOnline={isOnline}
+        onClose={() => setShowVision(false)}
+        onAnalyze={handleVisionAnalyze}
+      />
+    )}
     </div>
   );
 }
