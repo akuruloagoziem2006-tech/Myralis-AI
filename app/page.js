@@ -125,7 +125,9 @@ export default function Home() {
       function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const clean = text.replace(/[*#`_\~\[\]]/g, "").replace(/
+    const clean = String(text)
+      .replace(/[*#`_\~\[\]]/g, "")
+      .replace(/
 +/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.95;
@@ -133,13 +135,10 @@ export default function Home() {
     utterance.volume = 1;
 
     const voices = window.speechSynthesis.getVoices();
-    const maleVoice = voices.find(v =>
-      /male|david|james|daniel|google uk english male|microsoft david|microsoft mark/i.test(v.name)
-    ) || voices.find(v =>
-      v.lang.startsWith("en") && /male/i.test(v.name)
-    ) || voices.find(v =>
-      v.lang.startsWith("en")
-    );
+    const maleVoice =
+      voices.find((v) => /male|david|james|daniel|google uk english male|microsoft david|microsoft mark/i.test(v.name)) ||
+      voices.find((v) => v.lang.startsWith("en") && /male/i.test(v.name)) ||
+      voices.find((v) => v.lang.startsWith("en"));
 
     if (maleVoice) utterance.voice = maleVoice;
     window.speechSynthesis.speak(utterance);
