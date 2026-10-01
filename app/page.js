@@ -127,8 +127,7 @@ export default function Home() {
     window.speechSynthesis.cancel();
     const clean = String(text)
       .replace(/[*#`_\~\[\]]/g, "")
-      .replace(/
-+/g, ". ");
+      .replace(/\n+/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.95;
     utterance.pitch = 0.85;
@@ -143,7 +142,6 @@ export default function Home() {
     if (maleVoice) utterance.voice = maleVoice;
     window.speechSynthesis.speak(utterance);
   }
-
   function newChat() {
     if (messages.length > 1) {
       const title = messages.find((m) => m.role === "user")?.content?.slice(0, 40) || "New conversation";
