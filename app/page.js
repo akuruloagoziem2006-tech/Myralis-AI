@@ -276,8 +276,9 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: updatedMessages.slice(-12).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }), memory })
     });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    let data;
+    try { data = await res.json(); } catch { throw new Error("Gemini route returned HTTP " + res.status + (res.redirected ? " (redirected)" : "")); }
+    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
     if (data.updatedMemory) saveMemory(data.updatedMemory);
     return data.reply;
   }
@@ -323,9 +324,10 @@ To use Local AI:
       } else {
         try {
           reply = await sendToGemini(updatedMessages);
-        } catch {
+        } catch (geminiErr) {
           try {
             reply = await sendToLocal(userMessage);
+            reply = "⚠️ Gemini failed: " + (geminiErr?.message || "unknown") + "\n\n" + reply;
             setLocalStatus("online");
           } catch {
             reply = "Connection error. Check your internet or start the local server in Termux.";
