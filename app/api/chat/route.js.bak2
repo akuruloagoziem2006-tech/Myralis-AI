@@ -90,17 +90,15 @@ Style:
     };
 
     let r;
-    const tried = [];
     for (const model of MODELS) {
-      tried.push(model);
       r = await callGemini(model, { ...base, tools: [{ google_search: {} }] });
-      if (!r.response.ok && [400, 429].includes(r.response.status)) r = await callGemini(model, base);
+      if (!r.response.ok && r.response.status === 400) r = await callGemini(model, base);
       if (r.response.ok) break;
       if (![404, 429, 500, 503, 504].includes(r.response.status)) break;
     }
     if (!r.response.ok) {
       return Response.json(
-        { error: (r.data.error?.message || "API Error") + " [tried: " + tried.join(", ") + "]" },
+        { error: r.data.error?.message || "API Error" },
         { status: 500 }
       );
     }
