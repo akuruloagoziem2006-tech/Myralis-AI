@@ -33,7 +33,7 @@ export default function Home() {
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
-  const LOCAL_URL = "http://10.133.224.203";
+  const LOCAL_URL = "https://8830de2e41ccc7.lhr.life";
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
