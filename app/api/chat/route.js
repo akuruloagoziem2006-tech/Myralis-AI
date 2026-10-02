@@ -100,8 +100,9 @@ Style:
 
     let r;
     const tried = [];
+    let usedModel = "";
     for (const model of MODELS) {
-      tried.push(model);
+      tried.push(model); usedModel = model;
       r = await callGemini(model, { ...base, tools: [{ google_search: {} }] });
       if (!r.response.ok && [400, 429].includes(r.response.status)) r = await callGemini(model, base);
       if (r.response.ok) break;
@@ -136,7 +137,7 @@ Style:
       .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`);
     if (links.length) reply += "\n\nSources:\n" + links.join("\n");
 
-    return Response.json({ reply, updatedMemory });
+    return Response.json({ reply, updatedMemory, model: usedModel });
   } catch (error) {
     return Response.json({ error: "Server error" }, { status: 500 });
   }
