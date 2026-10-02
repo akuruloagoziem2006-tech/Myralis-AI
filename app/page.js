@@ -33,7 +33,7 @@ export default function Home() {
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
 
-  const LOCAL_URL = "http://10.191.226.147:8765";
+  const LOCAL_URL = "http://10.133.224.203";
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -306,9 +306,18 @@ export default function Home() {
         } catch {
           setLocalStatus("offline");
           if (!isOnline) {
-            reply = "You're offline and the **local Myralis server** is not running.\n\nTo use offline mode:\n1. Open Termux\n2. Run: `python myralis_server.py`\n3. Try again";
+            reply = "You're offline and the **local Myralis server** is not running.
+
+To use Local AI:
+1. Open Termux
+2. Run: `python myralis_server.py`
+3. Try again";
           } else {
-            reply = await sendToGemini(updatedMessages);
+            try {
+              reply = await sendToGemini(updatedMessages);
+            } catch {
+              reply = "Local AI is not reachable. Start it in Termux with: `python myralis_server.py`";
+            }
           }
         }
       } else {
@@ -319,7 +328,7 @@ export default function Home() {
             reply = await sendToLocal(userMessage);
             setLocalStatus("online");
           } catch {
-            reply = "Connection error. Check your internet or start the local server.";
+            reply = "Connection error. Check your internet or start the local server in Termux.";
           }
         }
       }
