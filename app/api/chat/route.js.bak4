@@ -1,8 +1,6 @@
 export const maxDuration = 60;
-
 const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
-const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
 
 function buildContents(messages) {
   const recent = (messages || []).slice(-12);
@@ -23,29 +21,26 @@ function buildContents(messages) {
   return contents;
 }
 
-async function callGemini(model, body, timeoutMs) {
-  try {
-    const response = await fetch(apiFor(model), {
-      method: "POST",
-      signal: AbortSignal.timeout(timeoutMs),
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": process.env.GEMINI_API_KEY
-      },
-      body: JSON.stringify(body)
-    });
-    let data = {};
-    try { data = await response.json(); } catch {}
-    return { ok: response.ok, status: response.status, data };
-  } catch (e) {
-    return { ok: false, status: 504, data: { error: { message: "Timeout or network error" } } };
-  }
+async function callGeminiRaw(model, body) {
+  const response = await fetch(apiFor(model), {
+    method: "POST",
+    signal: AbortSignal.timeout(12000),
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": process.env.GEMINI_API_KEY
+    },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json();
+  return { response, data };
 }
 
-function extract(data) {
-  const cand = data?.candidates?.[0];
-  const text = (cand?.content?.parts || []).map((p) => p.text || "").join("").trim();
-  return { cand, text };
+async function callGemini(model, body) {
+  try {
+    return await callGeminiRaw(model, body);
+  } catch (e) {
+    return { response: { ok: false, status: 504 }, data: { error: { message: "Timeout or network error on " + model } } };
+  }
 }
 
 export async function POST(request) {
@@ -103,36 +98,31 @@ Style:
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096, topP: 0.95 }
     };
 
-    const lastUser = [...(messages || [])].reverse().find((m) => m.role === "user");
-    const useSearch = NEEDS_SEARCH.test(lastUser?.content || "");
-
-    const started = Date.now();
-    const left = () => 50000 - (Date.now() - started);
-    const attempts = [];
-    let result = null;
-    let fatal = null;
-
+    let r;
+    const tried = [];
+    let usedModel = "";
     for (const model of MODELS) {
-      const plans = useSearch ? [true, false] : [false];
-      for (const withSearch of plans) {
-        const budget = Math.min(withSearch ? 20000 : 15000, left());
-        if (budget < 3000) break;
-        const body = withSearch ? { ...base, tools: [{ google_search: {} }] } : base;
-        const r = await callGemini(model, body, budget);
-        const { cand, text } = extract(r.data);
-        attempts.push(`${model}${withSearch ? "+search" : ""}:${r.status}${r.ok && !text ? ":empty" : ""}`);
-        if (r.ok && text) { result = { model, cand, text }; break; }
-        if (!r.ok && ![400, 404, 429, 500, 503, 504].includes(r.status)) { fatal = r; break; }
-      }
-      if (result || fatal) break;
+      tried.push(model); usedModel = model;
+      r = await callGemini(model, { ...base, tools: [{ google_search: {} }] });
+      if (!r.response.ok && [400, 429].includes(r.response.status)) r = await callGemini(model, base);
+      if (r.response.ok) break;
+      if (![404, 429, 500, 503, 504].includes(r.response.status)) break;
+    }
+    if (!r.response.ok) {
+      return Response.json(
+        { error: (r.data.error?.message || "API Error") + " [tried: " + tried.join(", ") + "]" },
+        { status: 500 }
+      );
     }
 
-    if (!result) {
-      const msg = fatal?.data?.error?.message || "Gemini is busy or out of quota right now";
-      return Response.json({ error: `${msg} [${attempts.join(", ")}]` }, { status: 502 });
+    const cand = r.data.candidates?.[0];
+    let reply = (cand?.content?.parts || []).map((p) => p.text || "").join("").trim();
+    if (!reply) {
+      reply = cand?.finishReason === "SAFETY"
+        ? "I can't help with that one."
+        : "I couldn't generate a response. Please try again.";
     }
 
-    let reply = result.text;
     let updatedMemory = null;
     const memoryMatch = reply.match(/\[\[MEMORY\]\]([\s\S]*?)\[\[\/MEMORY\]\]/);
     if (memoryMatch) {
@@ -140,14 +130,14 @@ Style:
       reply = reply.replace(/\[\[MEMORY\]\][\s\S]*?\[\[\/MEMORY\]\]/, "").trim();
     }
 
-    const chunks = result.cand?.groundingMetadata?.groundingChunks || [];
+    const chunks = cand?.groundingMetadata?.groundingChunks || [];
     const links = chunks
       .filter((c) => c.web?.uri)
       .slice(0, 3)
       .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`);
     if (links.length) reply += "\n\nSources:\n" + links.join("\n");
 
-    return Response.json({ reply, updatedMemory, model: result.model, attempts });
+    return Response.json({ reply, updatedMemory, model: usedModel });
   } catch (error) {
     return Response.json({ error: "Server error" }, { status: 500 });
   }
