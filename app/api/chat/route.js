@@ -1,5 +1,6 @@
-const MODEL = "gemini-3.8-flash";
-const API = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+export const maxDuration = 60;
+const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 function buildContents(messages) {
   const recent = (messages || []).slice(-12);
@@ -20,8 +21,8 @@ function buildContents(messages) {
   return contents;
 }
 
-async function callGemini(body) {
-  const response = await fetch(API, {
+async function callGemini(model, body) {
+  const response = await fetch(apiFor(model), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,8 +89,13 @@ Style:
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096, topP: 0.95 }
     };
 
-    let r = await callGemini({ ...base, tools: [{ google_search: {} }] });
-    if (!r.response.ok) r = await callGemini(base);
+    let r;
+    for (const model of MODELS) {
+      r = await callGemini(model, { ...base, tools: [{ google_search: {} }] });
+      if (!r.response.ok && r.response.status === 400) r = await callGemini(model, base);
+      if (r.response.ok) break;
+      if (![404, 429, 500, 503, 504].includes(r.response.status)) break;
+    }
     if (!r.response.ok) {
       return Response.json(
         { error: r.data.error?.message || "API Error" },
