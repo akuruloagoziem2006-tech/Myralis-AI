@@ -56,14 +56,14 @@ export default function Home() {
     else {
       setMessages([{
         role: "assistant",
-        content: "Hello. I'm **Myralis**, your personal AI.\n\nI can use **Gemini** when online, or your **Local AI** when offline."
+        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.\n\nTry one of these:\n• Explain quantum computing in simple terms\n• Help me plan a productive day\n• Improve this paragraph: [paste your text]\n• What should I learn to get better at coding?\n\nYou can also use **voice**, **images**, or **live Vision** (eye icon)."
       }]);
     }
 
     if (speak !== null) setAutoSpeak(speak === "true");
     if (chats) setPastChats(JSON.parse(chats));
     if (savedMemory) setMemory(savedMemory);
-    if (savedLocal === "true") setUseLocal(true);
+    setUseLocal(false); // public app: Gemini only
 
     checkLocalServer();
 
@@ -298,7 +298,7 @@ export default function Home() {
 
     try {
       let reply = "";
-      const preferLocal = useLocal || !isOnline;
+      const preferLocal = false; // public app: always Gemini when online
 
       if (preferLocal) {
         try {
@@ -361,13 +361,8 @@ To use Local AI:
 
   const sortedChats = [...pastChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
-  const statusText = useLocal
-    ? (localStatus === "online" ? "Local • Connected" : "Local • Not running")
-    : (isOnline ? "Online" : "Offline");
-
-  const statusColor = useLocal
-    ? (localStatus === "online" ? "#4ade80" : "#f87171")
-    : (isOnline ? "#4ade80" : "#f87171");
+  const statusText = isOnline ? "Online" : "Offline";
+  const statusColor = isOnline ? "#4ade80" : "#f87171";
 
   return (
     <div style={styles.page}>
@@ -407,35 +402,7 @@ To use Local AI:
 
             {/* AI Engine Switch */}
             <div style={styles.modeBox}>
-              <div style={styles.modeLabel}>AI Engine</div>
-              <div style={styles.modeRow}>
-                <button
-                  onClick={() => { setUseLocal(false); localStorage.setItem("myralis_use_local", "false"); }}
-                  style={{
-                    ...styles.modeBtn,
-                    background: !useLocal ? "#7c3aed" : "transparent",
-                    borderColor: !useLocal ? "#7c3aed" : "#333"
-                  }}
-                >
-                  Gemini
-                </button>
-                <button
-                  onClick={toggleLocalMode}
-                  style={{
-                    ...styles.modeBtn,
-                    background: useLocal ? "#7c3aed" : "transparent",
-                    borderColor: useLocal ? "#7c3aed" : "#333"
-                  }}
-                >
-                  Local AI
-                </button>
-              </div>
-              <div style={styles.modeHint}>
-                {useLocal
-                  ? (localStatus === "online" ? "Connected to your phone server" : "Run: python myralis_server.py")
-                  : "Uses Google Gemini when online"}
-              </div>
-            </div>
+              {/* Public mode: Gemini only */}
 
             {/* Memory */}
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>

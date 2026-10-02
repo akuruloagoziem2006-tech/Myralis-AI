@@ -1,5 +1,36 @@
 export const maxDuration = 60;
 
+// Simple best-effort rate limit (per serverless instance)
+const hits = globalThis.__myralisHits || (globalThis.__myralisHits = new Map());
+const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_MAX = 40; // max requests per IP per hour
+
+function clientIp(request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function rateLimitCheck(request) {
+  const ip = clientIp(request);
+  const now = Date.now();
+  const row = hits.get(ip) || { count: 0, start: now };
+  if (now - row.start > RATE_WINDOW_MS) {
+    row.count = 0;
+    row.start = now;
+  }
+  row.count += 1;
+  hits.set(ip, row);
+  if (row.count > RATE_MAX) {
+    return { ok: false, retryAfterSec: Math.ceil((RATE_WINDOW_MS - (now - row.start)) / 1000) };
+  }
+  return { ok: true };
+}
+
+
+
 const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
