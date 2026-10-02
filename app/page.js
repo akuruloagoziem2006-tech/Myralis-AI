@@ -306,17 +306,17 @@ export default function Home() {
         } catch {
           setLocalStatus("offline");
           if (!isOnline) {
-            reply = "You're offline and the **local Myralis server** is not running.
+            reply = `You're offline and the **local Myralis server** is not running.
 
 To use Local AI:
 1. Open Termux
-2. Run: `python myralis_server.py`
-3. Try again";
+2. Run: python myralis_server.py
+3. Try again`;
           } else {
             try {
               reply = await sendToGemini(updatedMessages);
             } catch {
-              reply = "Local AI is not reachable. Start it in Termux with: `python myralis_server.py`";
+              reply = "Local AI is not reachable. Start it in Termux with: python myralis_server.py";
             }
           }
         }
