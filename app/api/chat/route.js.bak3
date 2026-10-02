@@ -21,10 +21,9 @@ function buildContents(messages) {
   return contents;
 }
 
-async function callGeminiRaw(model, body) {
+async function callGemini(model, body) {
   const response = await fetch(apiFor(model), {
     method: "POST",
-    signal: AbortSignal.timeout(12000),
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": process.env.GEMINI_API_KEY
@@ -33,14 +32,6 @@ async function callGeminiRaw(model, body) {
   });
   const data = await response.json();
   return { response, data };
-}
-
-async function callGemini(model, body) {
-  try {
-    return await callGeminiRaw(model, body);
-  } catch (e) {
-    return { response: { ok: false, status: 504 }, data: { error: { message: "Timeout or network error on " + model } } };
-  }
 }
 
 export async function POST(request) {
