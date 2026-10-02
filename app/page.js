@@ -274,7 +274,7 @@ export default function Home() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: updatedMessages, memory })
+      body: JSON.stringify({ messages: updatedMessages.slice(-12).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }), memory })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
