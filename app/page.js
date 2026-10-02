@@ -400,10 +400,6 @@ To use Local AI:
               <span style={styles.menuIcon}>✏️</span> New Chat
             </button>
 
-            {/* AI Engine Switch */}
-            <div style={styles.modeBox}>
-              {/* Public mode: Gemini only */}
-
             {/* Memory */}
             <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
               <span style={styles.menuIcon}>🧠</span> Memory & Settings
