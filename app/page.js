@@ -124,7 +124,7 @@ export default function Home() {
 
       function speak(text) {
     if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+    try { window.speechSynthesis?.cancel(); } catch {}
     const clean = String(text)
       .replace(/[*#`_\~\[\]]/g, "")
       .replace(/\n+/g, ". ");
@@ -235,7 +235,7 @@ export default function Home() {
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
-    window.speechSynthesis.cancel();
+    try { window.speechSynthesis?.cancel(); } catch {}
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
@@ -289,7 +289,7 @@ export default function Home() {
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
     setLoading(true);
-    window.speechSynthesis.cancel();
+    try { window.speechSynthesis?.cancel(); } catch {}
 
     const newUserMsg = { role: "user", content: userMessage, image: image || null };
     let updatedMessages = currentMessages === messages ? [...messages, newUserMsg] : currentMessages;
@@ -336,7 +336,7 @@ To use Local AI:
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      if (autoSpeak) speak(reply);
+      if (autoSpeak) { try { speak(reply); } catch {} }
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Please try again." }]);
     }
