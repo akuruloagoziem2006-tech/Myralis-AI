@@ -126,11 +126,12 @@ Pick a prompt below or type your own. You can also use **voice**, **images**, or
 
       function speak(text) {
     const NativeTTS = window.Capacitor?.Plugins?.TextToSpeech;
+    if (!NativeTTS && window.Capacitor?.isNativePlatform?.()) alert("Native TTS plugin missing. Plugins: " + Object.keys(window.Capacitor?.Plugins || {}).join(", "));
     if (NativeTTS) {
       try {
         const spoken = String(text || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/Sources:[\s\S]*$/, "").replace(/[*_#`~>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 3500);
         NativeTTS.stop().catch(() => {});
-        if (spoken) NativeTTS.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.8, volume: 1.0 }).catch(() => {});
+        if (spoken) NativeTTS.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.8, volume: 1.0 }).catch((e) => alert("TTS error: " + (e?.message || e)));
       } catch {}
       return;
     }
