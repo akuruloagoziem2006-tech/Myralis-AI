@@ -1,0 +1,7 @@
+{
+  "appId": "com.myralis.app",
+  "appName": "Myralis",
+  "webDir": "www",
+  "server": { "url": "https://myralis-ai.vercel.app", "cleartext": true },
+  "android": { "allowMixedContent": true }
+}
