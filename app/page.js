@@ -36,6 +36,7 @@ export default function Home() {
   const LOCAL_URL = "http://127.0.0.1:8766";
 
   useEffect(() => {
+    if (!document.getElementById("native-voice")) { const nv = document.createElement("script"); nv.id = "native-voice"; nv.src = "/native-voice.js"; document.head.appendChild(nv); }
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
