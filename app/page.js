@@ -11,7 +11,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [thinkingSeconds, setThinkingSeconds] = useState(0);
   const [listening, setListening] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [autoSpeak, setAutoSpeak] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [image, setImage] = useState(null);
   const [pastChats, setPastChats] = useState([]);
@@ -60,7 +60,7 @@ export default function Home() {
       }]);
     }
 
-    if (speak !== null) setAutoSpeak(speak === "true");
+    if (speak !== null) setAutoSpeak(speak === "true"); else setAutoSpeak(false);
     if (chats) setPastChats(JSON.parse(chats));
     if (savedMemory) setMemory(savedMemory);
     setUseLocal(false); // public app: Gemini only
@@ -317,7 +317,7 @@ To use Local AI:
             try {
               reply = await sendToGemini(updatedMessages);
             } catch {
-              reply = "Local AI is not reachable. Start it in Termux with: python myralis_server.py";
+              reply = "The AI service is temporarily unavailable. Please try again shortly.";
             }
           }
         }
@@ -330,7 +330,7 @@ To use Local AI:
             reply = "⚠️ Gemini failed: " + (geminiErr?.message || "unknown") + "\n\n" + reply;
             setLocalStatus("online");
           } catch {
-            reply = "Connection error. Check your internet or start the local server in Termux.";
+            reply = "I couldn't reach the AI service. Check your internet and try again.";
           }
         }
       }
@@ -346,12 +346,10 @@ To use Local AI:
 
 
   async function handleVisionAnalyze(dataUrl, summary) {
-    const prompt = `You are Myralis Vision (Jarvis-style). Analyze this live camera frame.\nDetected objects: ${summary}.\nDescribe clearly what you see, important objects, and anything useful. Be concise.`;
+    const prompt = `Vision analysis (Jarvis-style). Detected: ${summary || "unknown objects"}.
+Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or notable. Be concise and practical.`;
     setImage(dataUrl);
-    setInput(prompt);
-    setTimeout(() => {
-      sendMessageWithText(prompt);
-    }, 50);
+    setTimeout(() => sendMessageWithText(prompt), 50);
   }
 
   function sendMessage() {
@@ -481,6 +479,21 @@ To use Local AI:
       {/* Chat Area */}
       <main style={styles.chat}>
         <div style={styles.chatInner}>
+          
+        {messages.length <= 1 && !loading && (
+          <div style={styles.quickWrap}>
+            {[
+              "Explain quantum computing in simple terms",
+              "Help me plan a productive day",
+              "Improve this paragraph: paste your text",
+              "What should I learn to get better at coding?"
+            ].map((p) => (
+              <button key={p} onClick={() => sendMessageWithText(p)} style={styles.quickChip}>{p}</button>
+            ))}
+            <div style={styles.installTip}>Install Myralis: browser menu → Add to Home Screen</div>
+          </div>
+        )}
+
           {messages.map((msg, i) => (
             <div key={i} style={styles.messageBlock}>
               <div style={{
@@ -588,6 +601,28 @@ To use Local AI:
 }
 
 const styles = {
+  quickWrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    padding: "8px 4px 16px"
+  },
+  quickChip: {
+    textAlign: "left",
+    border: "1px solid #27272a",
+    background: "#18181b",
+    color: "#e4e4e7",
+    borderRadius: 12,
+    padding: "10px 12px",
+    fontSize: 13,
+    cursor: "pointer"
+  },
+  installTip: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#71717a"
+  },
+
   page: {
     height: "100dvh",
     maxHeight: "100dvh",
@@ -975,6 +1010,7 @@ const styles = {
     fontSize: 12
   },
   footer: {
+    paddingBottom: "max(10px, env(safe-area-inset-bottom))",
     padding: "10px 14px 14px",
     flexShrink: 0
   },

@@ -106,6 +106,12 @@ How to answer:
 - Use the user's memory to personalize only when it helps
 - Treat conversations as private
 
+Special modes:
+- Learning: explain simply, use examples, then offer a quick check question
+- Writing: improve clarity and structure while keeping the user's voice
+- Planning: give realistic steps, priorities, and time estimates when useful
+- Vision: describe what matters first, then useful details, concise and practical
+
 Current memory about the user:
 ${memory || "No information saved yet."}
 
@@ -159,7 +165,7 @@ Style:
     }
 
     if (!result) {
-      const msg = fatal?.data?.error?.message || "Gemini is busy or out of quota right now";
+      const msg = fatal?.data?.error?.message || "Myralis is busy right now. Please try again in a moment.";
       return Response.json({ error: `${msg} [${attempts.join(", ")}]` }, { status: 502 });
     }
 
