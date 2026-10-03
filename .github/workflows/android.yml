@@ -5,6 +5,8 @@ on:
     paths:
       - "android-app/**"
       - ".github/workflows/android.yml"
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,19 +19,29 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Keep the same signing key between builds
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: myralis-debug-keystore-v1
       - name: Create Android project
         working-directory: android-app
         run: |
           npm install
           npx cap add android
           sed -i 's|<application|<uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application android:usesCleartextTraffic="true"|' android/app/src/main/AndroidManifest.xml
-          grep -n "uses-permission\|cleartext" android/app/src/main/AndroidManifest.xml
+          sed -i 's|</manifest>|    <queries><intent><action android:name="android.speech.RecognitionService" /></intent></queries>\n</manifest>|' android/app/src/main/AndroidManifest.xml
+          grep -n "uses-permission\|cleartext\|queries" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
+          cp app/build/outputs/apk/debug/app-debug.apk ../../Myralis.apk
+          ls -la ../../Myralis.apk
+      - uses: softprops/action-gh-release@v2
         with:
-          name: myralis-apk
-          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: apk-latest
+          name: Myralis Android APK (latest)
+          files: Myralis.apk
+          make_latest: true
