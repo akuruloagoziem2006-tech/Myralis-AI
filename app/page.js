@@ -123,6 +123,16 @@ export default function Home() {
   }
 
       function speak(text) {
+    const NativeTTS = window.Capacitor?.Plugins?.TextToSpeech;
+    if (NativeTTS) {
+      try {
+        const spoken = String(text || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/Sources:[\s\S]*$/, "").replace(/[*_#`~>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 3500);
+        NativeTTS.stop().catch(() => {});
+        if (spoken) NativeTTS.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.8, volume: 1.0 }).catch(() => {});
+      } catch {}
+      return;
+    }
+
     if (!window.speechSynthesis) return;
     try { window.speechSynthesis?.cancel(); } catch {}
     const clean = String(text)
