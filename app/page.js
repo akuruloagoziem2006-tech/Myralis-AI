@@ -56,7 +56,9 @@ export default function Home() {
     else {
       setMessages([{
         role: "assistant",
-        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.\n\nTry one of these:\n• Explain quantum computing in simple terms\n• Help me plan a productive day\n• Improve this paragraph: [paste your text]\n• What should I learn to get better at coding?\n\nYou can also use **voice**, **images**, or **live Vision** (eye icon)."
+        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
+
+Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
       }]);
     }
 
@@ -160,9 +162,9 @@ export default function Home() {
     }
     const welcomeMsg = [{
       role: "assistant",
-      content: useLocal
-        ? "Local mode is on. I'm using your offline Myralis."
-        : "Hello. Ready when you are."
+      content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
+
+Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
     }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));

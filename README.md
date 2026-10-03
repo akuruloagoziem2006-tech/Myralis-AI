@@ -2,11 +2,12 @@
 
 **Myralis** is a personal AI assistant for learning, writing, planning, and everyday questions.
 
-🌐 Live: https://myralis-ai.vercel.app
+🌐 **Live:** https://myralis-ai.vercel.app
 
 ## Features
 
 - Smart chat powered by Google Gemini
+- Quick-start prompt chips
 - Conversation memory (saved in your browser)
 - Voice input and text-to-speech
 - Image understanding and live Vision mode
@@ -17,11 +18,11 @@
 
 ## Tech stack
 
-- Next.js 14 (App Router)
-- Google Gemini API
-- Vercel deployment
-- TensorFlow.js (on-device vision detection)
-- react-markdown
+- **Frontend:** Next.js 14 (App Router)
+- **AI:** Google Gemini API
+- **Vision:** TensorFlow.js (COCO-SSD)
+- **Deploy:** Vercel
+- **Markdown:** react-markdown + remark-gfm
 
 ## Run locally
 
@@ -34,14 +35,11 @@ GEMINI_API_KEY=your_api_key_here
 npm run dev
 Open http://localhost:3000
 Deploy on Vercel
-Import the GitHub repo on vercel.com
+Import this repo on vercel.com
 Add environment variable GEMINI_API_KEY
 Deploy
-Notes
-Public web app uses Gemini online
-Local Termux AI is optional and separate for private offline use
 Author
 Akurulo Agoziem
-GitHub: https://github.com/akuruloagoziem2006-tech
+GitHub: akuruloagoziem2006-tech
 License
 MIT
