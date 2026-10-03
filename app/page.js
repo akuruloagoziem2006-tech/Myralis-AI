@@ -234,6 +234,24 @@ export default function Home() {
 
   function startListening() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const NativeSR = window.Capacitor?.Plugins?.SpeechRecognition;
+    if (NativeSR) {
+      (async () => {
+        try {
+          const perm = await NativeSR.requestPermissions();
+          if (perm?.speechRecognition !== "granted") { alert("Microphone permission denied."); return; }
+          setListening(true);
+          const r = await NativeSR.start({ language: "en-US", maxResults: 1, partialResults: false, popup: false });
+          setListening(false);
+          const t = r?.matches?.[0];
+          if (t) { setInput(t); setTimeout(() => sendMessageWithText(t), 200); }
+        } catch (e) {
+          setListening(false);
+          alert("Mic error: " + (e?.message || e));
+        }
+      })();
+      return;
+    }
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
     try { window.speechSynthesis?.cancel(); } catch {}
     const recognition = new SpeechRecognition();
