@@ -162,9 +162,7 @@ export default function Home() {
     }
     const welcomeMsg = [{
       role: "assistant",
-      content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
-
-Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
+      content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.\n\nPick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
     }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
