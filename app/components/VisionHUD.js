@@ -44,7 +44,7 @@ export default function VisionHUD({ onClose, onAnalyze, isOnline }) {
         modelRef.current = model;
 
         setReady(true);
-        setStatus("Myralis Vision online");
+        setStatus("Point the camera at something to detect");
         detectLoop();
       } catch (err) {
         console.error(err);
@@ -165,7 +165,7 @@ export default function VisionHUD({ onClose, onAnalyze, isOnline }) {
       <div style={styles.bottomBar}>
         <div style={styles.detectList}>
           {detections.length === 0 ? (
-            <span style={{ color: "#64748b" }}>Scanning...</span>
+            <span style={{ color: "#64748b" }}>Point camera at an object…</span>
           ) : (
             detections.slice(0, 4).map((d, i) => (
               <span key={i} style={styles.chip}>

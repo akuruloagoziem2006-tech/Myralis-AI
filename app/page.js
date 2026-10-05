@@ -28,6 +28,7 @@ export default function Home() {
   const [useLocal, setUseLocal] = useState(false);
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const chatEnd = useRef(null);
   const fileInputRef = useRef(null);
@@ -57,7 +58,9 @@ export default function Home() {
     else {
       setMessages([{
         role: "assistant",
-        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.\n\nPick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
+        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
+
+Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
       }]);
     }
 
@@ -124,35 +127,32 @@ export default function Home() {
   }
 
       function speak(text) {
-    const NativeTTS = window.Capacitor?.Plugins?.TextToSpeech;
-    if (!NativeTTS && window.Capacitor?.isNativePlatform?.()) alert("Native TTS plugin missing. Plugins: " + Object.keys(window.Capacitor?.Plugins || {}).join(", "));
-    if (NativeTTS) {
-      try {
-        const spoken = String(text || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/Sources:[\s\S]*$/, "").replace(/[*_#`~>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 3500);
-        NativeTTS.stop().catch(() => {});
-        if (spoken) NativeTTS.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.8, volume: 1.0 }).catch((e) => alert("TTS error: " + (e?.message || e)));
-      } catch {}
-      return;
-    }
-
     if (!window.speechSynthesis) return;
-    try { window.speechSynthesis?.cancel(); } catch {}
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
     const clean = String(text)
       .replace(/[*#`_\~\[\]]/g, "")
-      .replace(/\n+/g, ". ");
+      .replace(/
++/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.95;
     utterance.pitch = 0.85;
     utterance.volume = 1;
-
     const voices = window.speechSynthesis.getVoices();
     const maleVoice =
       voices.find((v) => /male|david|james|daniel|google uk english male|microsoft david|microsoft mark/i.test(v.name)) ||
       voices.find((v) => v.lang.startsWith("en") && /male/i.test(v.name)) ||
       voices.find((v) => v.lang.startsWith("en"));
-
     if (maleVoice) utterance.voice = maleVoice;
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(utterance);
+  }
+
+  function stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setSpeaking(false);
   }
   function newChat() {
     if (messages.length > 1) {
@@ -160,10 +160,9 @@ export default function Home() {
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcomeMsg = [{
-      role: "assistant",
-      content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.\n\nPick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
-    }];
+    const welcomeMsg = [{ role: "assistant", content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
+
+Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**." }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
     setShowDashboard(false);
@@ -345,7 +344,7 @@ To use Local AI:
             try {
               reply = await sendToGemini(updatedMessages);
             } catch {
-              reply = "The AI service is temporarily unavailable. Please try again shortly.";
+              reply = "Myralis is busy right now. Please try again in a moment.";
             }
           }
         }
@@ -358,7 +357,7 @@ To use Local AI:
             reply = "⚠️ Gemini failed: " + (geminiErr?.message || "unknown") + "\n\n" + reply;
             setLocalStatus("online");
           } catch {
-            reply = "I couldn't reach the AI service. Check your internet and try again.";
+            reply = "I couldn't reach Myralis right now. Check your internet and try again.";
           }
         }
       }
@@ -366,7 +365,7 @@ To use Local AI:
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       if (autoSpeak) { try { speak(reply); } catch {} }
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong. Please try again." }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong on my side. Please try again." }]);
     }
 
     setLoading(false);
@@ -518,7 +517,14 @@ Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or
             ].map((p) => (
               <button key={p} onClick={() => sendMessageWithText(p)} style={styles.quickChip}>{p}</button>
             ))}
-            <div style={styles.installTip}>Install Myralis: browser menu → Add to Home Screen</div>
+            {typeof window !== "undefined" && !localStorage.getItem("myralis_seen_install_tip") && (
+              <div
+                style={styles.installTip}
+                onClick={() => localStorage.setItem("myralis_seen_install_tip", "1")}
+              >
+                Tip: Install Myralis from your browser menu → Add to Home Screen
+              </div>
+            )}
           </div>
         )}
 
@@ -574,6 +580,11 @@ Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or
               Thinking... {thinkingSeconds}s
             </div>
           )}
+          {loading && (
+            <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.9 }}>
+              Thinking… {thinkingSeconds}s
+            </div>
+          )}
           <div ref={chatEnd} />
         </div>
       </main>
@@ -588,12 +599,16 @@ Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or
       {/* Input */}
       <footer style={styles.footer}>
         <div style={styles.inputWrapper}>
-          <button onClick={startListening} style={{
-            ...styles.toolBtn,
-            background: listening ? "rgba(96,165,250,0.2)" : "transparent",
-            color: listening ? "#60a5fa" : "#71717a"
-          }}>
-            {listening ? "●" : "🎙"}
+          <button
+            onClick={speaking ? stopSpeaking : startListening}
+            style={{
+              ...styles.toolBtn,
+              background: listening || speaking ? "rgba(96,165,250,0.2)" : "transparent",
+              color: listening || speaking ? "#60a5fa" : "#71717a"
+            }}
+            title={speaking ? "Stop speaking" : "Voice input"}
+          >
+            {speaking ? "⏹" : listening ? "●" : "🎙"}
           </button>
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
           <button onClick={() => setShowVision(true)} style={styles.toolBtn} title="Vision">👁</button>
@@ -603,7 +618,7 @@ Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder={useLocal ? "Message Local Myralis..." : "Message Myralis..."}
+            placeholder="Message Myralis..."
           />
           <button
             onClick={sendMessage}
