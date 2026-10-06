@@ -58,9 +58,7 @@ export default function Home() {
     else {
       setMessages([{
         role: "assistant",
-        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
-
-Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
+        content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions. Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**."
       }]);
     }
 
@@ -160,9 +158,7 @@ Pick a prompt below or type your own. You can also use **voice**, **images**, or
       const updated = [{ id: Date.now(), title, messages, pinned: false }, ...pastChats].slice(0, 30);
       savePastChats(updated);
     }
-    const welcomeMsg = [{ role: "assistant", content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions.
-
-Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**." }];
+    const welcomeMsg = [{ role: "assistant", content: "Hello — I'm **Myralis**, your AI assistant for learning, writing, planning, and everyday questions. Pick a prompt below or type your own. You can also use **voice**, **images**, or **live Vision**." }];
     setMessages(welcomeMsg);
     localStorage.setItem("myralis_messages", JSON.stringify(welcomeMsg));
     setShowDashboard(false);
