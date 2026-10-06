@@ -130,8 +130,7 @@ export default function Home() {
     setSpeaking(false);
     const clean = String(text)
       .replace(/[*#`_\~\[\]]/g, "")
-      .replace(/
-+/g, ". ");
+      .replace(/\n+/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 0.95;
     utterance.pitch = 0.85;
