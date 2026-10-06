@@ -368,10 +368,26 @@ To use Local AI:
 
 
   async function handleVisionAnalyze(dataUrl, summary) {
-    const prompt = `Vision analysis (Jarvis-style). Detected: ${summary || "unknown objects"}.
-Describe clearly: 1) what this is overall, 2) key objects, 3) anything useful or notable. Be concise and practical.`;
-    setImage(dataUrl);
-    setTimeout(() => sendMessageWithText(prompt), 50);
+    setLoading(true);
+    setShowVision(false);
+    const userLine = summary && summary !== "no clear objects"
+      ? `Analyze this scene. On-device detections: ${summary}`
+      : "Analyze what you see in this camera frame.";
+    setMessages((prev) => [...prev, { role: "user", content: userLine, image: dataUrl }]);
+    try {
+      const res = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, summary })
+      });
+      const data = await res.json();
+      const reply = data.reply || data.error || "I could not analyze that frame.";
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      if (autoSpeak) speak(reply);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Vision analysis failed. Try again." }]);
+    }
+    setLoading(false);
   }
 
   function sendMessage() {

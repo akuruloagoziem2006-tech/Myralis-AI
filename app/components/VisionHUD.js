@@ -13,6 +13,7 @@ export default function VisionHUD({ onClose, onAnalyze, isOnline }) {
   const [ready, setReady] = useState(false);
   const [detections, setDetections] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [liveSummary, setLiveSummary] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -44,7 +45,7 @@ export default function VisionHUD({ onClose, onAnalyze, isOnline }) {
         modelRef.current = model;
 
         setReady(true);
-        setStatus("Point the camera at something to detect");
+        setStatus("JARVIS VISION // scanning");
         detectLoop();
       } catch (err) {
         console.error(err);
@@ -78,6 +79,10 @@ export default function VisionHUD({ onClose, onAnalyze, isOnline }) {
       try {
         const results = await model.detect(video);
         setDetections(results);
+        const labels = results.slice(0, 6).map(r => r.class);
+        const unique = [...new Set(labels)];
+        setLiveSummary(unique.length ? unique.join(" · ") : "scanning environment…");
+        setStatus(unique.length ? `SEEING: ${unique.join(", ")}` : "JARVIS VISION // scanning");
 
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, width, height);
