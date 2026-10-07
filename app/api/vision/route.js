@@ -2,7 +2,7 @@ export const maxDuration = 30;
 
 export async function POST(request) {
   try {
-    const { image } = await request.json();
+    const { image, mode } = await request.json();
     const key = process.env.VISION_API_KEY || process.env.GEMINI_API_KEY;
 
     if (!image || !String(image).startsWith("data:image")) {
@@ -14,18 +14,25 @@ export async function POST(request) {
 
     const mime = image.substring(5, image.indexOf(";")) || "image/jpeg";
     const data = image.split(",")[1];
+    const quick = mode === "live";
 
-    const prompt = `You are Myralis Vision.
+    const prompt = quick
+      ? `You are Myralis Vision (Friday-style HUD).
+Look at the image and give a very short live read (max 12 words).
+Name the main thing/material/scene exactly (e.g. "sand on the ground", "close-up of a hand", "city street at dusk").
+No preamble.`
+      : `You are Myralis Vision, like Friday in Iron Man.
 
-Analyze the attached photo carefully using only what is visible in the image.
+Analyze this image in depth using only what is visible:
+- Overall scene
+- Materials and surfaces (sand, water, metal, fabric, skin, concrete, etc.)
+- Objects, people, body parts, text if readable
+- Lighting, distance, notable details
+- Anything unusual
 
-Be precise:
-- If it is a hand, say it is a hand (left/right if clear), count visible fingers, note open/closed, jewelry, skin tone, background
-- If it is a face, person, object, room, or outdoor scene, describe that accurately
-- Do NOT default to vague labels like only "person" when a body part or object is clearly shown
-- Do NOT invent details
-- Use first person: "I can see..."
-- 3 to 6 clear sentences`;
+Be specific. If it's sand, say sand (fine/coarse, dry/wet if clear). If it's a hand, describe the hand.
+First person: "I can see..."
+About 4-8 sentences. Do not invent details.`;
 
     const models = [
       "gemini-2.5-flash",
@@ -57,10 +64,10 @@ Be precise:
               }],
               generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 700
+                maxOutputTokens: quick ? 60 : 800
               }
             }),
-            signal: AbortSignal.timeout(25000)
+            signal: AbortSignal.timeout(quick ? 12000 : 25000)
           }
         );
         const json = await res.json();
