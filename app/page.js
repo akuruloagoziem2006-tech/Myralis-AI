@@ -734,7 +734,19 @@ To use Local AI:
                   </div>
                 ) : (
                   msg.role === "assistant" ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({node, ...props}) => <p style={{ margin: "0 0 12px" }} {...props} />,
+                        ul: ({node, ...props}) => <ul style={{ margin: "0 0 12px", paddingLeft: 22 }} {...props} />,
+                        ol: ({node, ...props}) => <ol style={{ margin: "0 0 12px", paddingLeft: 22 }} {...props} />,
+                        li: ({node, ...props}) => <li style={{ marginBottom: 6 }} {...props} />,
+                        h1: ({node, ...props}) => <h1 style={{ margin: "18px 0 10px", fontSize: 22 }} {...props} />,
+                        h2: ({node, ...props}) => <h2 style={{ margin: "16px 0 8px", fontSize: 18 }} {...props} />,
+                        h3: ({node, ...props}) => <h3 style={{ margin: "14px 0 8px", fontSize: 16 }} {...props} />,
+                        hr: ({node, ...props}) => <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid rgba(127,127,127,0.25)" }} {...props} />
+                      }}
+                    >{msg.content}</ReactMarkdown>
                   ) : msg.content
                 )}
               </div>
@@ -856,7 +868,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "10px 14px",
+    padding: "12px 16px",
     position: "sticky",
     top: 0,
     zIndex: 20
@@ -864,51 +876,52 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: "12px 0 120px"
+    padding: "8px 0 140px"
   },
   chatInner: {
     maxWidth: 820,
     margin: "0 auto",
     width: "100%",
-    padding: "0 16px"
+    padding: "0 18px"
   },
   messageBlock: {
-    marginBottom: 18
+    marginBottom: 22
   },
   bubble: {
     maxWidth: "92%",
-    lineHeight: 1.6,
+    lineHeight: 1.65,
     fontSize: 15.5,
     wordBreak: "break-word"
   },
   userBubble: {
     marginLeft: "auto",
-    borderRadius: "22px",
-    padding: "10px 16px"
+    borderRadius: 22,
+    padding: "12px 16px"
   },
   assistantBubble: {
     marginRight: "auto",
-    borderRadius: "0",
-    padding: "4px 0"
+    borderRadius: 0,
+    padding: "6px 0 2px"
   },
   footer: {
     position: "fixed",
     left: 0,
     right: 0,
     bottom: 0,
-    padding: "10px 12px max(12px, env(safe-area-inset-bottom))",
-    background: "transparent"
+    padding: "8px 14px max(14px, env(safe-area-inset-bottom))",
+    background: "transparent",
+    zIndex: 40
   },
   inputWrapper: {
     maxWidth: 820,
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     borderRadius: 28,
-    padding: "8px 10px",
-    border: "1px solid rgba(127,127,127,0.25)",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.12)"
+    padding: "10px 12px",
+    border: "1px solid rgba(127,127,127,0.22)",
+    boxShadow: "0 8px 28px rgba(0,0,0,0.08)"
   },
   input: {
     flex: 1,
@@ -935,12 +948,10 @@ const styles = {
     padding: "4px 6px"
   },
   quickWrap: {
-    display: "grid",
-    gridTemplateColumns: "1fr",
+    display: "flex",
+    flexDirection: "column",
     gap: 10,
-    padding: "8px 0 20px",
-    maxWidth: 820,
-    margin: "0 auto"
+    padding: "12px 2px 24px"
   },
   quickChip: {
     textAlign: "left",
@@ -948,7 +959,7 @@ const styles = {
     padding: "12px 14px",
     fontSize: 14,
     cursor: "pointer",
-    border: "1px solid rgba(127,127,127,0.25)",
+    border: "1px solid rgba(127,127,127,0.22)",
     background: "transparent"
   },
   installTip: {
@@ -1288,8 +1299,10 @@ const styles = {
   actions: {
     display: "flex",
     gap: 2,
-    marginTop: 5,
-    flexWrap: "wrap"
+    marginTop: 6,
+    marginBottom: 4,
+    flexWrap: "wrap",
+    alignItems: "center"
   },
   actionBtn: {
     border: "none",
@@ -1297,8 +1310,8 @@ const styles = {
     color: "#71717a",
     fontSize: 16,
     cursor: "pointer",
-    padding: "6px 8px",
-    borderRadius: 8,
+    padding: "8px 10px",
+    borderRadius: 10,
     lineHeight: 1
   },
   editArea: {
