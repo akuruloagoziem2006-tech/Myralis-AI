@@ -389,29 +389,38 @@ To use Local AI:
   }
 
 
-  async function handleVisionAnalyze(dataUrl, summary) {
+  async function handleVisionAnalyze(dataUrl, summary, mode = "full", question = "") {
     setLoading(true);
     setShowVision(false);
+    const labels = {
+      full: "Full vision analysis of this camera frame.",
+      text: "Read all the text in this camera frame.",
+      identify: "Identify what is in this camera frame.",
+      translate: "Translate the text in this camera frame.",
+      solve: "Solve what is shown in this camera frame.",
+      count: "Count the objects in this camera frame."
+    };
     setMessages((prev) => [...prev, {
       role: "user",
-      content: "Full vision analysis of this camera frame.",
+      content: mode === "ask" ? question : (labels[mode] || labels.full),
       image: dataUrl
     }]);
     try {
       const res = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl, mode: "full" })
+        body: JSON.stringify({ image: dataUrl, mode, question, detections: summary })
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
       const reply = data.reply || "I could not analyze that frame.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      if (autoSpeak) speak(reply);
+      if (autoSpeak) { try { speak(reply); } catch {} }
     } catch (err) {
+      const offline = summary ? "\n\nWhat my on-device detector sees: " + summary + "." : "";
       setMessages((prev) => [...prev, {
         role: "assistant",
-        content: "Vision analysis failed: " + (err?.message || "unknown error")
+        content: "Vision analysis failed: " + (err?.message || "unknown error") + offline
       }]);
     }
     setLoading(false);

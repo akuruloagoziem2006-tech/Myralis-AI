@@ -1,8 +1,34 @@
 export const maxDuration = 30;
 
+const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+
+const BASE = `You are Myralis Vision, a sharp, calm visual assistant. Use only what is visible in the image. If something is unclear, say so instead of guessing. Do not identify real people from their faces; describe them instead. Reply in plain text with short paragraphs or simple bullets, no markdown headings.`;
+
+function promptFor(mode, question, detections) {
+  const hint = detections ? `\nA lightweight on-device detector also saw: ${String(detections).slice(0, 200)}. Treat that as a hint, not as truth.` : "";
+  switch (mode) {
+    case "live":
+      return `${BASE}\nGive a live read in at most 12 words. Name the main subject, material or scene exactly. No preamble.`;
+    case "text":
+      return `${BASE}\nRead all visible text exactly as written, keeping the order and line breaks. If there is no text, say so. Then add a one-line summary. If the text is not English, add an English translation.`;
+    case "identify":
+      return `${BASE}\nIdentify the main thing or things as specifically as possible (species, model, brand, type, landmark). Give a confidence level and the visible clues. Mention close alternatives if unsure. Add one useful fact.${hint}`;
+    case "translate":
+      return `${BASE}\nFind all visible text, give the original and a clear English translation, and name the language. If there is no text, say so.`;
+    case "solve":
+      return `${BASE}\nIf the image shows a problem (math, puzzle, question, code, error message), solve it step by step and give the final answer. Otherwise say what you see and ask what to solve.`;
+    case "count":
+      return `${BASE}\nCount the distinct objects, grouped by type, with numbers. Say if a count is approximate or partly hidden.${hint}`;
+    case "ask":
+      return `${BASE}\nAnswer this question about the image: "${String(question || "").slice(0, 500)}"${hint}`;
+    default:
+      return `${BASE}\nFirst decide what the image mainly shows (a scene, object, plant or animal, food, document or screen, product, math or code, a person, and so on) and respond in the way most useful for that. Cover the main subject, key details (materials, colors, condition, readable text), context, and anything unusual. If it is a document or screenshot, summarize the content. If it is a problem, solve it. If it is a plant, animal or object, identify it with a confidence level and say what it is for or how to care for it. Use 4 to 8 sentences unless the content needs more.${hint}`;
+  }
+}
+
 export async function POST(request) {
   try {
-    const { image, mode } = await request.json();
+    const { image, mode, question, detections } = await request.json();
     const key = process.env.VISION_API_KEY || process.env.GEMINI_API_KEY;
 
     if (!image || !String(image).startsWith("data:image")) {
@@ -15,78 +41,42 @@ export async function POST(request) {
     const mime = image.substring(5, image.indexOf(";")) || "image/jpeg";
     const data = image.split(",")[1];
     const quick = mode === "live";
+    const prompt = promptFor(mode, question, detections);
 
-    const prompt = quick
-      ? `You are Myralis Vision (Friday-style HUD).
-Look at the image and give a very short live read (max 12 words).
-Name the main thing/material/scene exactly (e.g. "sand on the ground", "close-up of a hand", "city street at dusk").
-No preamble.`
-      : `You are Myralis Vision, like Friday in Iron Man.
-
-Analyze this image in depth using only what is visible:
-- Overall scene
-- Materials and surfaces (sand, water, metal, fabric, skin, concrete, etc.)
-- Objects, people, body parts, text if readable
-- Lighting, distance, notable details
-- Anything unusual
-
-Be specific. If it's sand, say sand (fine/coarse, dry/wet if clear). If it's a hand, describe the hand.
-First person: "I can see..."
-About 4-8 sentences. Do not invent details.`;
-
-    const models = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-flash-latest",
-      "gemini-1.5-flash"
-    ];
-
+    const started = Date.now();
+    const left = () => 27000 - (Date.now() - started);
+    const attempts = [];
     let reply = null;
-    let lastError = null;
 
-    for (const model of models) {
+    for (const model of MODELS) {
+      const budget = Math.min(quick ? 10000 : 18000, left());
+      if (budget < 3000) break;
       try {
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": key
-            },
+            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
             body: JSON.stringify({
-              contents: [{
-                role: "user",
-                parts: [
-                  { inline_data: { mime_type: mime, data } },
-                  { text: prompt }
-                ]
-              }],
-              generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: quick ? 60 : 800
-              }
+              contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data } }, { text: prompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: quick ? 300 : 2048 }
             }),
-            signal: AbortSignal.timeout(quick ? 12000 : 25000)
+            signal: AbortSignal.timeout(budget)
           }
         );
-        const json = await res.json();
-        const text = (json?.candidates?.[0]?.content?.parts || [])
-          .map((p) => p.text || "")
-          .join("")
-          .trim();
-        if (res.ok && text) {
-          reply = text;
-          break;
-        }
-        lastError = json?.error?.message || `HTTP ${res.status}`;
+        let json = {};
+        try { json = await res.json(); } catch {}
+        const text = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
+        attempts.push(`${model}:${res.status}${res.ok && !text ? ":empty" : ""}`);
+        if (res.ok && text) { reply = text; break; }
+        if (!res.ok && ![400, 404, 429, 500, 503, 504].includes(res.status)) break;
       } catch (e) {
-        lastError = e.message || "request failed";
+        attempts.push(`${model}:timeout`);
       }
     }
 
     if (!reply) {
-      return Response.json({ error: lastError || "Vision unavailable" }, { status: 502 });
+      return Response.json({ error: `Vision is busy or out of quota [${attempts.join(", ")}]` }, { status: 502 });
     }
     return Response.json({ reply });
   } catch {
