@@ -876,7 +876,7 @@ const styles = {
   chat: {
     flex: 1,
     overflowY: "auto",
-    padding: " 8px 0 200px"
+    padding: " 8px 0 260px"
   },
   chatInner: {
     maxWidth: 820,
