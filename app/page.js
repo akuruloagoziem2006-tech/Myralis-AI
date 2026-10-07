@@ -29,6 +29,7 @@ export default function Home() {
   const [useLocal, setUseLocal] = useState(false);
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
+  const [theme, setTheme] = useState("dark");
   const [speaking, setSpeaking] = useState(false);
 
   const chatEnd = useRef(null);
@@ -64,6 +65,8 @@ export default function Home() {
     }
 
     setIsOnline(navigator.onLine);
+    const savedTheme = localStorage.getItem("myralis_theme");
+    if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
     const goOnline = () => setIsOnline(true);
     const goOffline = () => setIsOnline(false);
     window.addEventListener("online", goOnline);
@@ -90,7 +93,39 @@ export default function Home() {
 
     checkLocalServer();
 
-    return () => {
+    const isLight = theme === "light";
+  const c = isLight
+    ? {
+        bg: "#f7f7f8",
+        panel: "#ffffff",
+        panel2: "#ececf1",
+        text: "#0d0d0d",
+        muted: "#6b6b76",
+        border: "#e5e5e5",
+        user: "#1a1a1a",
+        userText: "#ffffff",
+        assistant: "transparent",
+        inputBg: "#ffffff",
+        accent: "#7c3aed",
+        danger: "#b91c1c"
+      }
+    : {
+        bg: "#0a0a0c",
+        panel: "#111114",
+        panel2: "#1a1a1f",
+        text: "#ececf1",
+        muted: "#8b8b98",
+        border: "#2a2a32",
+        user: "#2f2f3a",
+        userText: "#f4f4f5",
+        assistant: "transparent",
+        inputBg: "#1a1a1f",
+        accent: "#8b5cf6",
+        danger: "#f87171"
+      };
+
+  return (
+) => {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
@@ -112,7 +147,39 @@ export default function Home() {
       clearInterval(timerRef.current);
       setThinkingSeconds(0);
     }
-    return () => clearInterval(timerRef.current);
+    const isLight = theme === "light";
+  const c = isLight
+    ? {
+        bg: "#f7f7f8",
+        panel: "#ffffff",
+        panel2: "#ececf1",
+        text: "#0d0d0d",
+        muted: "#6b6b76",
+        border: "#e5e5e5",
+        user: "#1a1a1a",
+        userText: "#ffffff",
+        assistant: "transparent",
+        inputBg: "#ffffff",
+        accent: "#7c3aed",
+        danger: "#b91c1c"
+      }
+    : {
+        bg: "#0a0a0c",
+        panel: "#111114",
+        panel2: "#1a1a1f",
+        text: "#ececf1",
+        muted: "#8b8b98",
+        border: "#2a2a32",
+        user: "#2f2f3a",
+        userText: "#f4f4f5",
+        assistant: "transparent",
+        inputBg: "#1a1a1f",
+        accent: "#8b5cf6",
+        danger: "#f87171"
+      };
+
+  return (
+) => clearInterval(timerRef.current);
   }, [loading]);
 
   async function checkLocalServer() {
@@ -172,6 +239,14 @@ export default function Home() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     setSpeaking(false);
   }
+  function toggleTheme() {
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      localStorage.setItem("myralis_theme", next);
+      return next;
+    });
+  }
+
   function newChat() {
     if (messages.length > 1) {
       const title = messages.find((m) => m.role === "user")?.content?.slice(0, 40) || "New conversation";
@@ -437,10 +512,42 @@ To use Local AI:
   const statusText = isOnline ? "Online" : "Offline";
   const statusColor = isOnline ? "#4ade80" : "#f87171";
 
+  const isLight = theme === "light";
+  const c = isLight
+    ? {
+        bg: "#f7f7f8",
+        panel: "#ffffff",
+        panel2: "#ececf1",
+        text: "#0d0d0d",
+        muted: "#6b6b76",
+        border: "#e5e5e5",
+        user: "#1a1a1a",
+        userText: "#ffffff",
+        assistant: "transparent",
+        inputBg: "#ffffff",
+        accent: "#7c3aed",
+        danger: "#b91c1c"
+      }
+    : {
+        bg: "#0a0a0c",
+        panel: "#111114",
+        panel2: "#1a1a1f",
+        text: "#ececf1",
+        muted: "#8b8b98",
+        border: "#2a2a32",
+        user: "#2f2f3a",
+        userText: "#f4f4f5",
+        assistant: "transparent",
+        inputBg: "#1a1a1f",
+        accent: "#8b5cf6",
+        danger: "#f87171"
+      };
+
   return (
-    <div style={styles.page}>
+
+    <div style={{ ...styles.page, background: c.bg, color: c.text }}>
       {/* Header */}
-      <header style={styles.header}>
+      <header style={{ ...styles.header, background: c.panel, borderBottom: `1px solid ${c.border}` }}>
         <div style={styles.brand} onClick={() => setShowDashboard(true)}>
           <div style={styles.logoMark}>✧</div>
           <div>
@@ -448,7 +555,16 @@ To use Local AI:
             <div style={{ ...styles.statusLine, color: statusColor }}>{statusText}</div>
           </div>
         </div>
-        <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
+        <button onClick={toggleTheme} style={{
+              background: c.panel2,
+              border: `1px solid ${c.border}`,
+              color: c.text,
+              borderRadius: 999,
+              padding: "8px 12px",
+              fontSize: 13,
+              marginRight: 8
+            }} title="Toggle theme">{isLight ? "Dark" : "Light"}</button>
+          <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
       </header>
 
       {/* Side Menu */}
@@ -552,7 +668,7 @@ To use Local AI:
       )}
 
       {/* Chat Area */}
-      <main style={styles.chat}>
+      <main style={{ ...styles.chat, background: c.bg }}>
         <div style={styles.chatInner}>
           
         {messages.length <= 1 && !loading && (
@@ -563,7 +679,7 @@ To use Local AI:
               "Improve this paragraph: paste your text",
               "What should I learn to get better at coding?"
             ].map((p) => (
-              <button key={p} onClick={() => sendMessageWithText(p)} style={styles.quickChip}>{p}</button>
+              <button key={p} onClick={() => sendMessageWithText(p)} style={{ ...styles.quickChip, color: c.text, borderColor: c.border, background: c.panel }}>{p}</button>
             ))}
             {typeof window !== "undefined" && !localStorage.getItem("myralis_seen_install_tip") && (
               <div
@@ -580,7 +696,9 @@ To use Local AI:
             <div key={i} style={styles.messageBlock}>
               <div style={{
                 ...styles.bubble,
-                ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble)
+                ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble),
+                background: msg.role === "user" ? c.user : c.assistant,
+                color: msg.role === "user" ? c.userText : c.text
               }}>
                 {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
                 {editingIndex === i ? (
@@ -644,7 +762,7 @@ To use Local AI:
 
       {/* Input */}
       <footer style={styles.footer}>
-        <div style={styles.inputWrapper}>
+        <div style={{ ...styles.inputWrapper, background: c.inputBg, borderColor: c.border, color: c.text }}>
           <button
             onClick={speaking ? stopSpeaking : startListening}
             style={{
@@ -660,7 +778,7 @@ To use Local AI:
           <button onClick={() => setShowVision(true)} style={styles.toolBtn} title="Vision">👁</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <input
-            style={styles.input}
+            style={{ ...styles.input, color: c.text }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
@@ -669,10 +787,7 @@ To use Local AI:
           <button
             onClick={sendMessage}
             disabled={loading || (!input.trim() && !image)}
-            style={{
-              ...styles.sendBtn,
-              opacity: loading || (!input.trim() && !image) ? 0.4 : 1
-            }}
+            style={{ ...styles.sendBtn, background: c.accent, opacity: loading || (!input.trim() && !image) ? 0.4 : 1 }}
           >
             ↑
           </button>
@@ -690,13 +805,120 @@ To use Local AI:
   );
 }
 
+
 const styles = {
-  quickWrap: {
+  page: {
+    height: "100dvh",
     display: "flex",
     flexDirection: "column",
-    gap: 8,
-    padding: "8px 4px 16px"
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    overflow: "hidden"
   },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    position: "sticky",
+    top: 0,
+    zIndex: 20
+  },
+  chat: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "12px 0 120px"
+  },
+  chatInner: {
+    maxWidth: 820,
+    margin: "0 auto",
+    width: "100%",
+    padding: "0 16px"
+  },
+  messageBlock: {
+    marginBottom: 18
+  },
+  bubble: {
+    maxWidth: "92%",
+    lineHeight: 1.6,
+    fontSize: 15.5,
+    wordBreak: "break-word"
+  },
+  userBubble: {
+    marginLeft: "auto",
+    borderRadius: "22px",
+    padding: "10px 16px"
+  },
+  assistantBubble: {
+    marginRight: "auto",
+    borderRadius: "0",
+    padding: "4px 0"
+  },
+  footer: {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: "10px 12px max(12px, env(safe-area-inset-bottom))",
+    background: "transparent"
+  },
+  inputWrapper: {
+    maxWidth: 820,
+    margin: "0 auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 28,
+    padding: "8px 10px",
+    border: "1px solid rgba(127,127,127,0.25)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.12)"
+  },
+  input: {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 15,
+    padding: "8px 4px"
+  },
+  sendBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    border: "none",
+    color: "#fff",
+    fontSize: 16,
+    cursor: "pointer"
+  },
+  toolBtn: {
+    border: "none",
+    background: "transparent",
+    fontSize: 18,
+    cursor: "pointer",
+    padding: "4px 6px"
+  },
+  quickWrap: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 10,
+    padding: "8px 0 20px",
+    maxWidth: 820,
+    margin: "0 auto"
+  },
+  quickChip: {
+    textAlign: "left",
+    borderRadius: 16,
+    padding: "12px 14px",
+    fontSize: 14,
+    cursor: "pointer",
+    border: "1px solid rgba(127,127,127,0.25)",
+    background: "transparent"
+  },
+  installTip: {
+    marginTop: 4,
+    fontSize: 12,
+    opacity: 0.7
+  },
+
   quickChip: {
     textAlign: "left",
     border: "1px solid #27272a",
