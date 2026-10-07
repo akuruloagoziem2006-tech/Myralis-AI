@@ -8,28 +8,24 @@ export async function POST(request) {
     if (!image || !String(image).startsWith("data:image")) {
       return Response.json({ error: "No image provided" }, { status: 400 });
     }
-
     if (!key) {
-      return Response.json({
-        error: "Vision API key missing. Add VISION_API_KEY or GEMINI_API_KEY in Vercel."
-      }, { status: 500 });
+      return Response.json({ error: "Missing VISION_API_KEY or GEMINI_API_KEY" }, { status: 500 });
     }
 
     const mime = image.substring(5, image.indexOf(";")) || "image/jpeg";
     const data = image.split(",")[1];
 
-    // Important: ask Gemini to describe the IMAGE, not detection labels
     const prompt = `You are Myralis Vision.
 
-Look carefully at the attached image and describe what you actually see.
+Analyze the attached photo carefully using only what is visible in the image.
 
-Rules:
-- Base your answer only on the image pixels
-- Do NOT rely on any external object-label list
-- Be specific: scene type, main subjects, colors, layout, activity, notable details
-- Use first person as Myralis ("I can see...")
-- Keep it clear and concise (about 4-8 sentences max)
-- If something is unclear, say so honestly`;
+Be precise:
+- If it is a hand, say it is a hand (left/right if clear), count visible fingers, note open/closed, jewelry, skin tone, background
+- If it is a face, person, object, room, or outdoor scene, describe that accurately
+- Do NOT default to vague labels like only "person" when a body part or object is clearly shown
+- Do NOT invent details
+- Use first person: "I can see..."
+- 3 to 6 clear sentences`;
 
     const models = [
       "gemini-2.5-flash",
@@ -60,20 +56,18 @@ Rules:
                 ]
               }],
               generationConfig: {
-                temperature: 0.4,
+                temperature: 0.3,
                 maxOutputTokens: 700
               }
             }),
             signal: AbortSignal.timeout(25000)
           }
         );
-
         const json = await res.json();
         const text = (json?.candidates?.[0]?.content?.parts || [])
           .map((p) => p.text || "")
           .join("")
           .trim();
-
         if (res.ok && text) {
           reply = text;
           break;
@@ -85,11 +79,8 @@ Rules:
     }
 
     if (!reply) {
-      return Response.json({
-        error: lastError || "Vision model unavailable"
-      }, { status: 502 });
+      return Response.json({ error: lastError || "Vision unavailable" }, { status: 502 });
     }
-
     return Response.json({ reply });
   } catch {
     return Response.json({ error: "Vision server error" }, { status: 500 });

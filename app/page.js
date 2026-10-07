@@ -394,7 +394,7 @@ To use Local AI:
     setShowVision(false);
     setMessages((prev) => [...prev, {
       role: "user",
-      content: "Describe what you see in this image.",
+      content: "Describe exactly what you see in this photo.",
       image: dataUrl
     }]);
     try {
@@ -404,10 +404,8 @@ To use Local AI:
         body: JSON.stringify({ image: dataUrl })
       });
       const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || ("HTTP " + res.status));
-      }
-      const reply = data.reply || "I could not describe that image.";
+      if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+      const reply = data.reply || "I could not describe that photo.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       if (autoSpeak) speak(reply);
     } catch (err) {
