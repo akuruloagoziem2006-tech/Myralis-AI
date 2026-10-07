@@ -746,17 +746,17 @@ To use Local AI:
                 }}>
                   {msg.role === "user" ? (
                     <>
-                      <button onClick={() => startEdit(i, msg.content)} style={styles.actionBtn}>Edit</button>
-                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn}>Copy</button>
+                      <button onClick={() => startEdit(i, msg.content)} style={styles.actionBtn} title="Edit">✏️</button>
+                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy">📋</button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn}>Copy</button>
-                      <button onClick={() => shareText(msg.content)} style={styles.actionBtn}>Share</button>
+                      <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy">📋</button>
+                      <button onClick={() => shareText(msg.content)} style={styles.actionBtn} title="Share">🔗</button>
                       <button onClick={() => toggleLike(i, "like")} style={{ ...styles.actionBtn, color: liked[i] === "like" ? "#4ade80" : undefined }}>👍</button>
                       <button onClick={() => toggleLike(i, "unlike")} style={{ ...styles.actionBtn, color: liked[i] === "unlike" ? "#f87171" : undefined }}>👎</button>
                       <button onClick={() => speak(msg.content)} style={styles.actionBtn}>🔊</button>
-                      <button onClick={() => regenerate(i)} style={styles.actionBtn}>Regenerate</button>
+                      <button onClick={() => regenerate(i)} style={styles.actionBtn} title="Regenerate">🔄</button>
                     </>
                   )}
                 </div>
@@ -1292,14 +1292,14 @@ const styles = {
     flexWrap: "wrap"
   },
   actionBtn: {
-    background: "transparent",
     border: "none",
-    color: "#52525b",
-    fontSize: 12,
+    background: "transparent",
+    color: "#71717a",
+    fontSize: 16,
     cursor: "pointer",
-    padding: "3px 6px",
-    borderRadius: 5,
-    fontWeight: 500
+    padding: "6px 8px",
+    borderRadius: 8,
+    lineHeight: 1
   },
   editArea: {
     width: "100%",
