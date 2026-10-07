@@ -296,11 +296,19 @@ export default function Home() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: updatedMessages.slice(-12).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }), memory })
+      body: JSON.stringify({
+        messages: updatedMessages.slice(-12).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }),
+        memory
+      })
     });
-    let data;
-    try { data = await res.json(); } catch { throw new Error("Gemini route returned HTTP " + res.status + (res.redirected ? " (redirected)" : "")); }
-    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+    let data = {};
+    try { data = await res.json(); } catch {
+      throw new Error("Bad response from /api/chat (HTTP " + res.status + ")");
+    }
+    if (!res.ok || data.error) {
+      throw new Error(data.error || ("HTTP " + res.status));
+    }
+    if (!data.reply) throw new Error("Empty reply from model");
     if (data.updatedMemory) saveMemory(data.updatedMemory);
     return data.reply;
   }
@@ -347,13 +355,7 @@ To use Local AI:
         try {
           reply = await sendToGemini(updatedMessages);
         } catch (geminiErr) {
-          try {
-            reply = await sendToLocal(userMessage);
-            reply = "⚠️ Gemini failed: " + (geminiErr?.message || "unknown") + "\n\n" + reply;
-            setLocalStatus("online");
-          } catch {
-            reply = "I couldn't reach Myralis right now. Check your internet and try again.";
-          }
+          reply = "Myralis API error: " + (geminiErr?.message || "unknown error");
         }
       }
 
