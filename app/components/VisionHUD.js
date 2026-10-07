@@ -172,7 +172,7 @@ export default function VisionHUD({ onClose, onAnalyze }) {
 
   async function analyze(mode = "full", q = "") {
     if (analyzingRef.current) return;
-    const image = captureFrame(0.85, 1280);
+    const image = captureFrame(0.8, 1024);
     if (!image) return;
     analyzingRef.current = true;
     setAnalyzing(true);

@@ -1,6 +1,6 @@
-export const maxDuration = 30;
+export const maxDuration = 60;
 
-const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+const MODELS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.6-flash"];
 
 const BASE = `You are Myralis Vision, a sharp, calm visual assistant. Use only what is visible in the image. If something is unclear, say so instead of guessing. Do not identify real people from their faces; describe them instead. Reply in plain text with short paragraphs or simple bullets, no markdown headings.`;
 
@@ -44,12 +44,15 @@ export async function POST(request) {
     const prompt = promptFor(mode, question, detections);
 
     const started = Date.now();
-    const left = () => 27000 - (Date.now() - started);
+    const left = () => 50000 - (Date.now() - started);
     const attempts = [];
     let reply = null;
 
-    for (const model of MODELS) {
-      const budget = Math.min(quick ? 10000 : 18000, left());
+    const ORDER = [...MODELS, ...MODELS];
+    for (let i = 0; i < ORDER.length; i++) {
+      const model = ORDER[i];
+      if (i === MODELS.length) await new Promise((r) => setTimeout(r, 500));
+      const budget = Math.min(quick ? 8000 : 14000, left());
       if (budget < 3000) break;
       try {
         const res = await fetch(
