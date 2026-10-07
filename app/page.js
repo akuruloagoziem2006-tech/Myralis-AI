@@ -372,22 +372,29 @@ To use Local AI:
   async function handleVisionAnalyze(dataUrl, summary) {
     setLoading(true);
     setShowVision(false);
-    const userLine = summary && summary !== "no clear objects"
-      ? `Analyze this scene. On-device detections: ${summary}`
-      : "Analyze what you see in this camera frame.";
-    setMessages((prev) => [...prev, { role: "user", content: userLine, image: dataUrl }]);
+    setMessages((prev) => [...prev, {
+      role: "user",
+      content: "Describe what you see in this image.",
+      image: dataUrl
+    }]);
     try {
       const res = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl, summary })
+        body: JSON.stringify({ image: dataUrl })
       });
       const data = await res.json();
-      const reply = data.reply || data.error || "I could not analyze that frame.";
+      if (!res.ok || data.error) {
+        throw new Error(data.error || ("HTTP " + res.status));
+      }
+      const reply = data.reply || "I could not describe that image.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       if (autoSpeak) speak(reply);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Vision analysis failed. Try again." }]);
+    } catch (err) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Vision analysis failed: " + (err?.message || "unknown error")
+      }]);
     }
     setLoading(false);
   }

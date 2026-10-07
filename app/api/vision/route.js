@@ -2,34 +2,42 @@ export const maxDuration = 30;
 
 export async function POST(request) {
   try {
-    const { image, summary } = await request.json();
+    const { image } = await request.json();
     const key = process.env.VISION_API_KEY || process.env.GEMINI_API_KEY;
+
+    if (!image || !String(image).startsWith("data:image")) {
+      return Response.json({ error: "No image provided" }, { status: 400 });
+    }
 
     if (!key) {
       return Response.json({
-        reply: localFallback(summary)
-      });
-    }
-
-    if (!image || !image.startsWith("data:image")) {
-      return Response.json({ error: "No image provided" }, { status: 400 });
+        error: "Vision API key missing. Add VISION_API_KEY or GEMINI_API_KEY in Vercel."
+      }, { status: 500 });
     }
 
     const mime = image.substring(5, image.indexOf(";")) || "image/jpeg";
     const data = image.split(",")[1];
 
-    const prompt = `You are Myralis Vision, a Jarvis-style visual analyst.
-Detected objects (on-device): ${summary || "none"}.
+    // Important: ask Gemini to describe the IMAGE, not detection labels
+    const prompt = `You are Myralis Vision.
 
-Describe what you see clearly:
-1) Overall scene (e.g. street, room, desk, city view)
-2) Important objects and people
-3) Notable activity or context
-4) One useful insight if relevant
+Look carefully at the attached image and describe what you actually see.
 
-Be concise, confident, and practical. Do not invent details that are not visible.`;
+Rules:
+- Base your answer only on the image pixels
+- Do NOT rely on any external object-label list
+- Be specific: scene type, main subjects, colors, layout, activity, notable details
+- Use first person as Myralis ("I can see...")
+- Keep it clear and concise (about 4-8 sentences max)
+- If something is unclear, say so honestly`;
 
-    const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
+    const models = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-flash-latest",
+      "gemini-1.5-flash"
+    ];
+
     let reply = null;
     let lastError = null;
 
@@ -44,50 +52,46 @@ Be concise, confident, and practical. Do not invent details that are not visible
               "x-goog-api-key": key
             },
             body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { inline_data: { mime_type: mime, data } },
-                    { text: prompt }
-                  ]
-                }
-              ],
+              contents: [{
+                role: "user",
+                parts: [
+                  { inline_data: { mime_type: mime, data } },
+                  { text: prompt }
+                ]
+              }],
               generationConfig: {
                 temperature: 0.4,
-                maxOutputTokens: 512
+                maxOutputTokens: 700
               }
             }),
-            signal: AbortSignal.timeout(20000)
+            signal: AbortSignal.timeout(25000)
           }
         );
+
         const json = await res.json();
-        const text = json?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
+        const text = (json?.candidates?.[0]?.content?.parts || [])
+          .map((p) => p.text || "")
+          .join("")
+          .trim();
+
         if (res.ok && text) {
           reply = text;
           break;
         }
         lastError = json?.error?.message || `HTTP ${res.status}`;
       } catch (e) {
-        lastError = e.message || "Vision request failed";
+        lastError = e.message || "request failed";
       }
     }
 
     if (!reply) {
       return Response.json({
-        reply: localFallback(summary) + (lastError ? `\n\n_(Cloud vision unavailable: ${lastError})_` : "")
-      });
+        error: lastError || "Vision model unavailable"
+      }, { status: 502 });
     }
 
     return Response.json({ reply });
   } catch {
     return Response.json({ error: "Vision server error" }, { status: 500 });
   }
-}
-
-function localFallback(summary) {
-  if (!summary || summary === "no clear objects") {
-    return "I can't clearly identify objects in this frame yet. Try better lighting or point at a clearer subject.";
-  }
-  return `From on-device vision, I can see: **${summary}**.\n\nCloud scene analysis isn't available right now, so this is the local detection summary only.`;
 }
