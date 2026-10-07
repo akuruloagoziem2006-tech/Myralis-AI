@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import VisionHUD from "./components/VisionHUD";
+import SettingsPanel from "./components/SettingsPanel";
 import SpiderSense from "./components/SpiderSense";
 
 export default function Home() {
@@ -29,6 +30,9 @@ export default function Home() {
   const [useLocal, setUseLocal] = useState(false);
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState("system");
+  const [senseOn, setSenseOn] = useState(true);
   const [theme, setTheme] = useState("dark");
   const [speaking, setSpeaking] = useState(false);
 
@@ -93,7 +97,8 @@ export default function Home() {
 
     checkLocalServer();
 
-    const isLight = theme === "light";
+    const isLight = theme === "light" || (theme === "system" && typeof window !== "undefined" && !window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDarkTheme = !isLight;
   const c = isLight
     ? {
         bg: "#f7f7f8",
@@ -147,7 +152,8 @@ export default function Home() {
       clearInterval(timerRef.current);
       setThinkingSeconds(0);
     }
-    const isLight = theme === "light";
+    const isLight = theme === "light" || (theme === "system" && typeof window !== "undefined" && !window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDarkTheme = !isLight;
   const c = isLight
     ? {
         bg: "#f7f7f8",
@@ -245,6 +251,30 @@ export default function Home() {
       localStorage.setItem("myralis_theme", next);
       return next;
     });
+  }
+
+  function setThemePersist(next) {
+    setTheme(next);
+    localStorage.setItem("myralis_theme", next);
+  }
+
+  function toggleSensePersist() {
+    setSenseOn((v) => {
+      const next = !v;
+      localStorage.setItem("myralis_sense", next ? "on" : "off");
+      return next;
+    });
+  }
+
+  function clearAllChats() {
+    setPastChats([]);
+    localStorage.removeItem("myralis_past_chats");
+    setShowSettings(false);
+  }
+
+  function clearMemoryOnly() {
+    setMemory("");
+    localStorage.removeItem("myralis_memory");
   }
 
   function newChat() {
@@ -512,7 +542,8 @@ To use Local AI:
   const statusText = isOnline ? "Online" : "Offline";
   const statusColor = isOnline ? "#4ade80" : "#f87171";
 
-  const isLight = theme === "light";
+  const isLight = theme === "light" || (theme === "system" && typeof window !== "undefined" && !window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDarkTheme = !isLight;
   const c = isLight
     ? {
         bg: "#f7f7f8",
@@ -564,6 +595,7 @@ To use Local AI:
               fontSize: 13,
               marginRight: 8
             }} title="Toggle theme">{isLight ? "Dark" : "Light"}</button>
+          <button onClick={() => setShowSettings(true)} style={{ background: "transparent", border: "1px solid #333", color: "inherit", borderRadius: 999, padding: "8px 12px", marginRight: 8, fontSize: 13 }}>⚙</button>
           <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
       </header>
 
@@ -793,7 +825,22 @@ To use Local AI:
           </button>
         </div>
       </footer>
-    <SpiderSense messages={messages} input={input} loading={loading} enabled={!useLocal && isOnline} onSend={(t) => sendMessageWithText(t)} onFill={(t) => setInput(t)} />
+    <SpiderSense messages={messages} input={input} loading={loading} enabled={!useLocal && isOnline && senseOn} onSend={(t) => sendMessageWithText(t)} onFill={(t) => setInput(t)} />
+    <SettingsPanel
+      open={showSettings}
+      onClose={() => setShowSettings(false)}
+      theme={theme}
+      onThemeChange={setThemePersist}
+      autoSpeak={autoSpeak}
+      onToggleSpeak={toggleSpeak}
+      senseOn={senseOn}
+      onToggleSense={toggleSensePersist}
+      memory={memory}
+      onEditMemory={() => { setShowSettings(false); setShowDashboard(true); setShowMemory(true); }}
+      onClearMemory={clearMemoryOnly}
+      onClearChats={clearAllChats}
+      onNewChat={() => { setShowSettings(false); newChat(); }}
+    />
     {showVision && (
       <VisionHUD
         isOnline={isOnline}
