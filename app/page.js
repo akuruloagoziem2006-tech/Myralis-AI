@@ -691,7 +691,7 @@ To use Local AI:
       )}
 
       {/* Chat Area */}
-      <main style={{ ...styles.chat, background: c.bg }}>
+      <main style={{ ...styles.chat, background: c.bg, paddingBottom: 220 }}>
         <div style={styles.chatInner}>
           
         {messages.length <= 1 && !loading && (
@@ -784,6 +784,7 @@ To use Local AI:
               Thinking… {thinkingSeconds}s
             </div>
           )}
+          <div className="myralis-bottom-spacer" style={{ height: 220, flexShrink: 0 }} />
           <div ref={chatEnd} />
         </div>
       </main>
