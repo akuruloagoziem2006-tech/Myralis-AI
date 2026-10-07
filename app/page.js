@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import VisionHUD from "./components/VisionHUD";
+import SpiderSense from "./components/SpiderSense";
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
@@ -677,6 +678,7 @@ To use Local AI:
           </button>
         </div>
       </footer>
+    <SpiderSense messages={messages} input={input} loading={loading} enabled={!useLocal && isOnline} onSend={(t) => sendMessageWithText(t)} onFill={(t) => setInput(t)} />
     {showVision && (
       <VisionHUD
         isOnline={isOnline}
