@@ -212,16 +212,7 @@ export default function SettingsPanel({
           />
         </Group>
 
-        <div
-          style={{
-            textAlign: "center",
-            color: c.muted,
-            fontSize: 12,
-            padding: "12px 0 28px"
-          }}
-        >
-          Myralis · local settings stored on this device
-        </div>
+
       </div>
     </div>
   );

@@ -585,15 +585,6 @@ To use Local AI:
             <div style={{ ...styles.statusLine, color: statusColor }}>{statusText}</div>
           </div>
         </div>
-        <button onClick={toggleTheme} style={{
-              background: c.panel2,
-              border: `1px solid ${c.border}`,
-              color: c.text,
-              borderRadius: 999,
-              padding: "8px 12px",
-              fontSize: 13,
-              marginRight: 8
-            }} title="Toggle theme">{isLight ? "Dark" : "Light"}</button>
           <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
       </header>
 
@@ -625,9 +616,6 @@ To use Local AI:
             </button>
 
             {/* Memory */}
-            <button onClick={() => setShowMemory(!showMemory)} style={styles.menuItem}>
-              <span style={styles.menuIcon}>🧠</span> Memory & Settings
-            </button>
 
             {showMemory && (
               <div style={styles.memoryPanel}>
