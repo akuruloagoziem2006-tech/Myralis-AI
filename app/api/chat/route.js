@@ -31,7 +31,7 @@ function rateLimitCheck(request) {
 
 
 
-const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"];
 const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
 
@@ -152,8 +152,8 @@ Style:
     for (const model of MODELS) {
       const plans = useSearch ? [true, false] : [false];
       for (const withSearch of plans) {
-        const budget = Math.min(withSearch ? 20000 : 15000, left());
-        if (budget < 3000) break;
+        const budget = Math.min(withSearch ? 25000 : 22000, left());
+        if (budget < 5000) break;
         const body = withSearch ? { ...base, tools: [{ google_search: {} }] } : base;
         const r = await callGemini(model, body, budget);
         const { cand, text } = extract(r.data);

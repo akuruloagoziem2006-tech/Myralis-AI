@@ -593,6 +593,7 @@ To use Local AI:
               Thinking... {thinkingSeconds}s
             </div>
           )}
+          
           {loading && (
             <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.9 }}>
               Thinking… {thinkingSeconds}s
