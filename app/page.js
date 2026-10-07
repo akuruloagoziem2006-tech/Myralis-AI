@@ -39,7 +39,27 @@ export default function Home() {
   useEffect(() => {
     if (!document.getElementById("native-voice")) { const nv = document.createElement("script"); nv.id = "native-voice"; nv.src = "/native-voice.js"; document.head.appendChild(nv); }
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        // Check for updates on load and when app is opened again
+        try { reg.update(); } catch {}
+        reg.addEventListener("updatefound", () => {
+          const worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              // Activate new worker immediately
+              worker.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+      }).catch(() => {});
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
     }
 
     setIsOnline(navigator.onLine);
