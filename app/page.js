@@ -33,7 +33,6 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState("system");
   const [senseOn, setSenseOn] = useState(true);
-  const [theme, setTheme] = useState("dark");
   const [speaking, setSpeaking] = useState(false);
 
   const chatEnd = useRef(null);
@@ -595,7 +594,6 @@ To use Local AI:
               fontSize: 13,
               marginRight: 8
             }} title="Toggle theme">{isLight ? "Dark" : "Light"}</button>
-          <button onClick={() => setShowSettings(true)} style={{ background: "transparent", border: "1px solid #333", color: "inherit", borderRadius: 999, padding: "8px 12px", marginRight: 8, fontSize: 13 }}>⚙</button>
           <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
       </header>
 
@@ -619,6 +617,11 @@ To use Local AI:
 
             <button onClick={newChat} style={styles.menuItem}>
               <span style={styles.menuIcon}>✏️</span> New Chat
+            </button>
+
+            
+            <button onClick={() => { setShowDashboard(false); setShowSettings(true); }} style={styles.menuItem}>
+              <span style={styles.menuIcon}>⚙</span> Settings
             </button>
 
             {/* Memory */}
