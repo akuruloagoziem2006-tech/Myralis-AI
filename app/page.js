@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import VisionHUD from "./components/VisionHUD";
+import CallMode from "./components/CallMode";
 import SettingsPanel from "./components/SettingsPanel";
 import SpiderSense from "./components/SpiderSense";
 
@@ -31,6 +32,7 @@ export default function Home() {
   const [useLocal, setUseLocal] = useState(false);
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
+  const [showCall, setShowCall] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState("system");
   const [senseOn, setSenseOn] = useState(true);
@@ -783,6 +785,7 @@ To use Local AI:
           </button>
           <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
           <button onClick={() => setShowVision(true)} style={styles.toolBtn} title="Vision">👁</button>
+          <button onClick={() => setShowCall(true)} style={styles.toolBtn} title="Call Myralis">📞</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <input
             style={{ ...styles.input, color: c.text }}
@@ -816,6 +819,9 @@ To use Local AI:
       onClearChats={clearAllChats}
       onNewChat={() => { setShowSettings(false); newChat(); }}
     />
+    {showCall && (
+      <CallMode memory={memory} onClose={() => setShowCall(false)} onTurn={(u, a) => setMessages((prev) => [...prev, { role: "user", content: u }, { role: "assistant", content: a }])} />
+    )}
     {showVision && (
       <VisionHUD
         isOnline={isOnline}
