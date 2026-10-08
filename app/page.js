@@ -31,7 +31,6 @@ export default function Home() {
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [chatSearch, setChatSearch] = useState("");
   const [theme, setTheme] = useState("system");
   const [senseOn, setSenseOn] = useState(true);
   const [speaking, setSpeaking] = useState(false);
@@ -591,99 +590,13 @@ To use Local AI:
 
       {/* Side Menu */}
       {showDashboard && (
-          <div style={styles.menuOverlay} onClick={() => setShowDashboard(false)}>
-            <div style={styles.menuDrawer} onClick={(e) => e.stopPropagation()}>
-              {/* Header */}
-              <div style={styles.menuProfile}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={styles.menuAvatar}>✦</div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 16 }}>Myralis</div>
-                    <div style={{ fontSize: 12, opacity: 0.6 }}>Personal AI</div>
-                  </div>
-                </div>
-                <button onClick={() => setShowDashboard(false)} style={styles.menuIconBtn}>✕</button>
-              </div>
-
-              {/* Primary actions card */}
-              <div style={styles.menuCard}>
-                <button
-                  onClick={() => { newChat(); setShowDashboard(false); }}
-                  style={styles.menuRow}
-                >
-                  <span style={styles.menuRowIcon}>✏️</span> New Chat
-                </button>
-                <button
-                  onClick={() => { setShowDashboard(false); setShowSettings(true); }}
-                  style={styles.menuRow}
-                >
-                  <span style={styles.menuRowIcon}>⚙️</span> Settings
-                </button>
-              </div>
-
-              {/* Conversations */}
-              <div style={styles.menuSectionLabel}>Conversations</div>
-              <div style={styles.menuCard}>
-                {(() => {
-                  const q = (chatSearch || "").trim().toLowerCase();
-                  const list = (pastChats || []).filter((c) =>
-                    !q || String(c.title || "").toLowerCase().includes(q)
-                  );
-                  if (!list.length) {
-                    return (
-                      <div style={{ padding: "14px 16px", opacity: 0.55, fontSize: 14 }}>
-                        {q ? "No matches" : "No conversations yet"}
-                      </div>
-                    );
-                  }
-                  return list.map((chat) => (
-                    <div key={chat.id} style={styles.menuChatRow}>
-                      <button
-                        onClick={() => {
-                          setMessages(chat.messages || []);
-                          setShowDashboard(false);
-                        }}
-                        style={styles.menuChatMain}
-                      >
-                        <div style={styles.menuChatTitle}>
-                          {(chat.pinned ? "📌 " : "") + (chat.title || "Chat")}
-                        </div>
-                      </button>
-                      <div style={styles.menuChatActions}>
-                        <button onClick={() => togglePin(chat.id)} style={styles.menuTiny} title="Pin">📌</button>
-                        <button onClick={() => startRename(chat)} style={styles.menuTiny} title="Rename">✏️</button>
-                        <button onClick={() => deleteChat(chat.id)} style={styles.menuTiny} title="Delete">🗑️</button>
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-
-              {/* Bottom bar */}
-              <div style={styles.menuBottomBar}>
-                <div style={styles.menuSearchWrap}>
-                  <span style={{ opacity: 0.5 }}>🔍</span>
-                  <input
-                    value={chatSearch}
-                    onChange={(e) => setChatSearch(e.target.value)}
-                    placeholder="Search"
-                    style={styles.menuSearchInput}
-                  />
-                </div>
-                <button
-                  onClick={() => { setShowDashboard(false); setShowSettings(true); }}
-                  style={styles.menuBottomBtn}
-                  title="Settings"
-                >⚙️</button>
-                <button
-                  onClick={() => { newChat(); setShowDashboard(false); }}
-                  style={styles.menuBottomBtn}
-                  title="New chat"
-                >✏️</button>
-              </div>
-            </div>
-          </div>
-        )}>
+        <div style={styles.overlay} onClick={() => {
+          setShowDashboard(false);
+          setRenamingId(null);
+          setEditMemory(false);
+          setShowMemory(false);
+        }}>
+          <div style={styles.dashboard} onClick={(e) => e.stopPropagation()}>
             {/* Profile */}
             <div style={styles.userSection}>
               <div style={styles.avatar}>✧</div>
@@ -945,136 +858,6 @@ To use Local AI:
 
 
 const styles = {
-
-  menuOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.45)",
-    zIndex: 100,
-    display: "flex"
-  },
-  menuDrawer: {
-    width: "min(340px, 88vw)",
-    height: "100%",
-    background: "#0c0c0e",
-    color: "#f4f4f5",
-    display: "flex",
-    flexDirection: "column",
-    padding: "12px 12px 10px",
-    boxShadow: "8px 0 30px rgba(0,0,0,0.35)"
-  },
-  menuProfile: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "10px 8px 16px"
-  },
-  menuAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
-    background: "linear-gradient(135deg,#8b5cf6,#06b6d4)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700
-  },
-  menuIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    border: "none",
-    background: "#1c1c1f",
-    color: "#fff",
-    fontSize: 16
-  },
-  menuCard: {
-    background: "#1c1c1f",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 16
-  },
-  menuRow: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "14px 16px",
-    background: "transparent",
-    border: "none",
-    borderBottom: "1px solid #2a2a2e",
-    color: "#f4f4f5",
-    fontSize: 15,
-    textAlign: "left"
-  },
-  menuRowIcon: { width: 24, textAlign: "center" },
-  menuSectionLabel: {
-    fontSize: 13,
-    opacity: 0.55,
-    padding: "0 8px 8px",
-    fontWeight: 500
-  },
-  menuChatRow: {
-    display: "flex",
-    alignItems: "center",
-    borderBottom: "1px solid #2a2a2e"
-  },
-  menuChatMain: {
-    flex: 1,
-    border: "none",
-    background: "transparent",
-    color: "#f4f4f5",
-    textAlign: "left",
-    padding: "12px 14px",
-    fontSize: 14
-  },
-  menuChatTitle: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap"
-  },
-  menuChatActions: { display: "flex", gap: 2, paddingRight: 8 },
-  menuTiny: {
-    border: "none",
-    background: "transparent",
-    fontSize: 14,
-    padding: 6,
-    cursor: "pointer"
-  },
-  menuBottomBar: {
-    marginTop: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    paddingTop: 10
-  },
-  menuSearchWrap: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    background: "#1c1c1f",
-    borderRadius: 999,
-    padding: "10px 14px"
-  },
-  menuSearchInput: {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: "#f4f4f5",
-    fontSize: 14
-  },
-  menuBottomBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    border: "none",
-    background: "#1c1c1f",
-    color: "#fff",
-    fontSize: 18
-  },
-
   page: {
     height: "100dvh",
     display: "flex",
