@@ -836,7 +836,7 @@ To use Local AI:
 
 const styles = {
   menuOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex" },
-  menuDrawer: { width: "min(340px, 88vw)", height: "100%", background: "#0c0c0e", color: "#f4f4f5", display: "flex", flexDirection: "column", padding: "12px 12px 10px", boxShadow: "8px 0 30px rgba(0,0,0,0.35)", overflowY: "auto" },
+  menuDrawer: { width: "min(340px, 88vw)", height: "100%", background: "#0c0c0e", color: "#f4f4f5", display: "flex", flexDirection: "column", padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 40px)", boxShadow: "8px 0 30px rgba(0,0,0,0.35)", overflowY: "auto" },
   menuProfile: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 8px 16px" },
   menuAvatar: { width: 42, height: 42, borderRadius: 999, background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 },
   menuIconBtn: { width: 40, height: 40, borderRadius: 999, border: "none", background: "#1c1c1f", color: "#fff", fontSize: 16 },
