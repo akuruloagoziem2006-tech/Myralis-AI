@@ -31,7 +31,7 @@ function rateLimitCheck(request) {
 
 
 
-const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"];
+const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
 
@@ -61,7 +61,7 @@ async function callGemini(model, body, timeoutMs) {
       signal: AbortSignal.timeout(timeoutMs),
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": process.env.GEMINI_API_KEY
+        "x-goog-api-key": process.env.CHAT_API_KEY || process.env.GEMINI_API_KEY
       },
       body: JSON.stringify(body)
     });
