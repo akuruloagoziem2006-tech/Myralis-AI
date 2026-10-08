@@ -32,6 +32,7 @@ What you know about the user: ${String(memory || "nothing yet").slice(0, 1500)}`
     const useSearch = NEEDS_SEARCH.test(String(lastUser?.content || ""));
     const started = Date.now();
 
+    const attempts = [];
     for (let i = 0; i < MODELS.length; i++) {
       const budget = Math.min(i === 0 && useSearch ? 14000 : 9000, 26000 - (Date.now() - started));
       if (budget < 3000) break;
@@ -54,6 +55,7 @@ What you know about the user: ${String(memory || "nothing yet").slice(0, 1500)}`
         let json = {};
         try { json = await res.json(); } catch {}
         const text = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
+        attempts.push(MODELS[i] + ":" + res.status + (res.ok && !text ? ":empty" : ""));
         if (res.ok && text) {
           const reply = text
             .replace(/\[\[MEMORY\]\][\s\S]*?\[\[\/MEMORY\]\]/g, "")
@@ -62,9 +64,11 @@ What you know about the user: ${String(memory || "nothing yet").slice(0, 1500)}`
             .trim();
           return Response.json({ reply, model: MODELS[i] });
         }
-      } catch {}
+      } catch {
+        attempts.push(MODELS[i] + ":timeout");
+      }
     }
-    return Response.json({ error: "Voice is busy right now" }, { status: 502 });
+    return Response.json({ error: "Voice is busy right now [" + attempts.join(", ") + "]" }, { status: 502 });
   } catch {
     return Response.json({ error: "Voice server error" }, { status: 500 });
   }
