@@ -1,7 +1,11 @@
 package com.myralis.app;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -16,6 +20,7 @@ import android.widget.TextView;
 
 public class OverlayService extends Service {
   static volatile String pendingAction = "";
+  private static final int NOTE_ID = 88;
   private WindowManager wm;
   private TextView bubble;
   private WindowManager.LayoutParams lp;
@@ -26,6 +31,7 @@ public class OverlayService extends Service {
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
+    startAsForeground();
     if (bubble != null) return START_STICKY;
     wm = (WindowManager) getSystemService(WINDOW_SERVICE);
     bubble = new TextView(this);
@@ -102,6 +108,27 @@ public class OverlayService extends Service {
     return START_STICKY;
   }
 
+  private void startAsForeground() {
+    Notification.Builder nb;
+    if (Build.VERSION.SDK_INT >= 26) {
+      NotificationChannel ch = new NotificationChannel("myralis_bubble", "Floating bubble", NotificationManager.IMPORTANCE_MIN);
+      getSystemService(NotificationManager.class).createNotificationChannel(ch);
+      nb = new Notification.Builder(this, "myralis_bubble");
+    } else {
+      nb = new Notification.Builder(this);
+    }
+    Notification n = nb.setContentTitle("Myralis bubble is on")
+        .setContentText("Tap the bubble to open. Long-press to start a call.")
+        .setSmallIcon(android.R.drawable.ic_menu_view)
+        .setOngoing(true)
+        .build();
+    if (Build.VERSION.SDK_INT >= 34) {
+      startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+    } else {
+      startForeground(NOTE_ID, n);
+    }
+  }
+
   private void openMyralis() {
     Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
     if (i != null) {
@@ -117,6 +144,7 @@ public class OverlayService extends Service {
       try { wm.removeView(bubble); } catch (Exception e) { }
       bubble = null;
     }
+    stopForeground(true);
     super.onDestroy();
   }
 }

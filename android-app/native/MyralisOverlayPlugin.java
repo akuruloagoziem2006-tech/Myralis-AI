@@ -2,6 +2,7 @@ package com.myralis.app;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.Settings;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -22,7 +23,9 @@ public class MyralisOverlayPlugin extends Plugin {
       call.reject("Turn on 'Display over other apps' for Myralis, then tap Floating bubble again");
       return;
     }
-    getContext().startService(new Intent(getContext(), OverlayService.class));
+    Intent svc = new Intent(getContext(), OverlayService.class);
+    if (Build.VERSION.SDK_INT >= 26) getContext().startForegroundService(svc);
+    else getContext().startService(svc);
     JSObject r = new JSObject();
     r.put("ok", true);
     call.resolve(r);
