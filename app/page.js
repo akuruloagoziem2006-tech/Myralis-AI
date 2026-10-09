@@ -48,7 +48,9 @@ export default function Home() {
     check();
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", check);
+    const timer = setInterval(check, 700);
     return () => {
+      clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", check);
     };
