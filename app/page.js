@@ -803,6 +803,8 @@ To use Local AI:
             <button onClick={() => { setShowPlus(false); fileInputRef.current?.click(); }} style={styles.plusRow}>🖼  Upload image</button>
             <button onClick={() => { setShowPlus(false); setShowVision(true); }} style={styles.plusRow}>👁  Live vision</button>
             <button onClick={() => { setShowPlus(false); setCallScreen(false); setShowCall(true); }} style={styles.plusRow}>📞  Call Myralis</button>
+            <button onClick={async () => { setShowPlus(false); try { const P = window.Capacitor?.Plugins?.MyralisOverlay; if (!P || !window.Capacitor?.isNativePlatform?.()) { alert("Floating bubble needs the Myralis Android app."); return; } await P.start(); alert("Floating bubble is on. Tap ✧ over any app to come back to Myralis."); } catch (e) { alert(e?.message || "Could not start the bubble"); } }} style={styles.plusRow}>🫧  Floating bubble</button>
+            <button onClick={async () => { setShowPlus(false); try { const P = window.Capacitor?.Plugins?.MyralisOverlay; if (P) await P.stop(); alert("Floating bubble is off."); } catch (e) { alert("Could not stop the bubble"); } }} style={styles.plusRow}>⏹  Stop bubble</button>
             <button onClick={() => { setShowPlus(false); setCallScreen(true); setShowCall(true); }} style={styles.plusRow}>🖥  Live screen</button>
           </div>
         )}
