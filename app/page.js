@@ -582,14 +582,18 @@ To use Local AI:
     <div style={{ ...styles.page, background: c.bg, color: c.text }}>
       {/* Header */}
       <header style={{ ...styles.header, background: c.panel, borderBottom: `1px solid ${c.border}` }}>
-        <div style={styles.brand} onClick={() => setShowDashboard(true)}>
-          <div style={styles.logoMark}>✧</div>
-          <div>
-            <div style={styles.brandName}>Myralis</div>
-            <div style={{ ...styles.statusLine, color: statusColor }}>{statusText}</div>
-          </div>
+        <button onClick={() => setShowDashboard(true)} style={styles.topIconBtn} title="Menu">☰</button>
+        <div style={styles.modeSwitch}>
+          <button
+            onClick={() => { setUseLocal(false); localStorage.setItem("myralis_use_local", "false"); }}
+            style={{ ...styles.modeSwitchBtn, ...(!useLocal ? styles.modeSwitchOn : {}) }}
+          >Online</button>
+          <button
+            onClick={() => { setUseLocal(true); localStorage.setItem("myralis_use_local", "true"); }}
+            style={{ ...styles.modeSwitchBtn, ...(useLocal ? styles.modeSwitchOn : {}) }}
+          >Local</button>
         </div>
-          <button onClick={newChat} style={styles.newChatBtn} title="New chat">✎</button>
+        <button onClick={newChat} style={styles.topIconBtn} title="New chat">✎</button>
       </header>
 
       {/* Side Menu */}
@@ -668,6 +672,12 @@ To use Local AI:
       <main style={{ ...styles.chat, background: c.bg, paddingBottom: 220 }}>
         <div style={styles.chatInner}>
           
+        {messages.length <= 1 && !loading && (
+          <div style={styles.heroWrap}>
+            <div style={styles.heroLogo}>✧</div>
+            <div style={{ ...styles.heroTitle, color: c.text }}>Myralis</div>
+          </div>
+        )}
         {messages.length <= 1 && !loading && (
           <div style={styles.quickWrap}>
             {[
@@ -1437,4 +1447,11 @@ const styles = {
   inputWrapper: { display: "flex", alignItems: "center", gap: 6, borderRadius: 28, border: "1px solid #27272a", padding: "6px 8px 6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box" },
   plusMenu: { position: "absolute", bottom: 96, left: 14, zIndex: 50, background: "#18181b", border: "1px solid #27272a", borderRadius: 18, padding: 6, boxShadow: "0 12px 36px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", minWidth: 210 },
   plusRow: { background: "transparent", border: "none", color: "#f4f4f5", textAlign: "left", padding: "12px 14px", borderRadius: 12, fontSize: 15 },
+  topIconBtn: { width: 44, height: 44, borderRadius: 999, border: "none", background: "transparent", color: "inherit", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" },
+  modeSwitch: { display: "flex", gap: 2, background: "#18181b", borderRadius: 999, padding: 3 },
+  modeSwitchBtn: { border: "none", background: "transparent", color: "#a1a1aa", borderRadius: 999, padding: "7px 16px", fontSize: 14, fontWeight: 600 },
+  modeSwitchOn: { background: "#f4f4f5", color: "#09090b" },
+  heroWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "36px 0 20px" },
+  heroLogo: { fontSize: 64, lineHeight: 1, background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+  heroTitle: { fontSize: 24, fontWeight: 700, letterSpacing: 0.5 },
 };
