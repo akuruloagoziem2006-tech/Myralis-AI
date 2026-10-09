@@ -1,9 +1,11 @@
 const PKG = {
-  whatsapp: "com.whatsapp",
-  youtube: "com.google.android.youtube",
-  chrome: "com.android.chrome",
-  maps: "com.google.android.apps.maps",
-  gmail: "com.google.android.gm"
+  whatsapp: ["com.whatsapp", "com.whatsapp.w4b"],
+  youtube: ["com.google.android.youtube"],
+  chrome: ["com.android.chrome", "com.google.android.apps.chrome"],
+  maps: ["com.google.android.apps.maps"],
+  gmail: ["com.google.android.gm"],
+  camera: ["com.android.camera", "com.android.camera2", "com.google.android.GoogleCamera"],
+  settings: ["com.android.settings"]
 };
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -82,8 +84,13 @@ export async function runAction(act) {
       return { text: "Opened the share sheet. Pick an app and send it yourself." };
     }
     if (act.type === "open") {
-      await P.openApp({ package: PKG[act.app] });
-      return { text: `Opened ${act.app}.` };
+      for (const pkg of PKG[act.app] || []) {
+        try {
+          await P.openApp({ package: pkg });
+          return { text: `Opened ${act.app}.` };
+        } catch {}
+      }
+      return { text: `I couldn't find ${act.app} on this phone. Check it's installed.` };
     }
     if (act.type === "call") {
       const c = await P.findContact({ name: act.name });
