@@ -25,6 +25,23 @@ jobs:
           path: ~/.android/debug.keystore
           key: myralis-debug-keystore-v1
       - name: Create Android project
+            - name: Add native device plugin
+        working-directory: android-app
+        run: |
+          cp native/MyralisDevicePlugin.java android/app/src/main/java/com/myralis/app/
+          python3 - <<'PY'
+          p = "android/app/src/main/java/com/myralis/app/MainActivity.java"
+          s = open(p).read()
+          s = s.replace("public class MainActivity extends BridgeActivity {",
+            "public class MainActivity extends BridgeActivity {\n  @Override public void onCreate(android.os.Bundle b) { registerPlugin(MyralisDevicePlugin.class); super.onCreate(b); }", 1)
+          open(p, "w").write(s)
+          m = "android/app/src/main/AndroidManifest.xml"
+          t = open(m).read()
+          if "SET_ALARM" not in t:
+              t = t.replace("<application", '<uses-permission android:name="com.android.alarm.permission.SET_ALARM" />\n    <application', 1)
+              open(m, "w").write(t)
+          PY
+          grep -n "registerPlugin\|SET_ALARM" android/app/src/main/java/com/myralis/app/MainActivity.java android/app/src/main/AndroidManifest.xml 
         working-directory: android-app
         run: |
           npm install
