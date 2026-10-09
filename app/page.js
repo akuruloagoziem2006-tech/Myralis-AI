@@ -594,16 +594,6 @@ To use Local AI:
       {/* Header */}
       <header style={{ ...styles.header, background: c.panel, borderBottom: `1px solid ${c.border}` }}>
         <button onClick={() => setShowDashboard(true)} style={styles.topIconBtn} title="Menu">☰</button>
-        <div style={styles.modeSwitch}>
-          <button
-            onClick={() => { setUseLocal(false); localStorage.setItem("myralis_use_local", "false"); }}
-            style={{ ...styles.modeSwitchBtn, ...(!useLocal ? styles.modeSwitchOn : {}) }}
-          >Online</button>
-          <button
-            onClick={() => { setUseLocal(true); localStorage.setItem("myralis_use_local", "true"); }}
-            style={{ ...styles.modeSwitchBtn, ...(useLocal ? styles.modeSwitchOn : {}) }}
-          >Local</button>
-        </div>
         <button onClick={newChat} style={styles.topIconBtn} title="New chat">✎</button>
       </header>
 
@@ -686,7 +676,6 @@ To use Local AI:
         {messages.length <= 1 && !loading && (
           <div style={styles.heroWrap}>
             <div style={styles.heroLogo}>✧</div>
-            <div style={{ ...styles.heroTitle, color: c.text }}>Myralis</div>
           </div>
         )}
         {messages.length <= 1 && !loading && (
