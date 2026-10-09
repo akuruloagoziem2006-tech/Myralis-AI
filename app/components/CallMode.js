@@ -116,7 +116,11 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
           }
         }
       } catch {}
-      if (!image) return "I can't see the screen yet. Wait a second after starting Live screen, then ask again. If it still doesn't work, move something on the screen so it refreshes.";
+      if (!image) {
+        const NP = nativePlugins();
+        if (!NP || !NP.MyralisScreen) return "The screen plugin is missing from this app build. Reinstall the newest Myralis.apk from Releases.";
+        return "Screen capture is on, but no frame has arrived yet. Move something on the screen, then ask again.";
+      }
     }
     const res = await fetch(screen ? "/api/screen" : "/api/voice", {
       method: "POST",
