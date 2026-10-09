@@ -108,8 +108,15 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
     if (screen) {
       try {
         const P5 = nativePlugins();
-        if (P5 && P5.MyralisScreen) { const f = await P5.MyralisScreen.frame(); image = (f && f.image) || ""; }
+        if (P5 && P5.MyralisScreen) {
+          for (let k = 0; k < 13 && !image; k++) {
+            const f = await P5.MyralisScreen.frame();
+            image = (f && f.image) || "";
+            if (!image) await sleep(300);
+          }
+        }
       } catch {}
+      if (!image) return "I can't see the screen yet. Wait a second after starting Live screen, then ask again. If it still doesn't work, move something on the screen so it refreshes.";
     }
     const res = await fetch(screen ? "/api/screen" : "/api/voice", {
       method: "POST",
