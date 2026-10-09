@@ -46,10 +46,15 @@ jobs:
                   "public class MainActivity extends BridgeActivity {\n  @Override\n  public void onCreate(android.os.Bundle savedInstanceState) {\n    registerPlugin(MyralisDevicePlugin.class);\n    super.onCreate(savedInstanceState);\n  }",
                   1)
               open(p, "w").write(s)
-          print("MainActivity patched" if "registerPlugin" in open(p).read() else "MainActivity NOT patched")
+          m = "android/app/src/main/AndroidManifest.xml"
+          t = open(m).read()
+          for perm in ["android.permission.READ_CALENDAR", "android.permission.READ_CONTACTS"]:
+              if perm not in t:
+                  t = t.replace("<application", '<uses-permission android:name="%s" />\n    <application' % perm, 1)
+          open(m, "w").write(t)
           PY
-          grep -n "registerPlugin\|class MainActivity" android/app/src/main/java/com/myralis/app/MainActivity.java
-          ls android/app/src/main/java/com/myralis/app/
+          grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
+          grep -n "READ_CALENDAR\|READ_CONTACTS" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
