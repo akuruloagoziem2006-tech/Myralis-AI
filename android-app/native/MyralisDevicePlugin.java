@@ -1,5 +1,9 @@
 package com.myralis.app;
 
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import java.util.List;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -235,5 +239,48 @@ public class MyralisDevicePlugin extends Plugin {
     } catch (Exception e) {
       call.reject("Contacts error: " + e.getMessage());
     }
+  }
+
+  @PluginMethod
+  public void openByName(PluginCall call) {
+    String name = call.getString("name", "").trim().toLowerCase();
+    if (name.isEmpty()) {
+      call.reject("name is required");
+      return;
+    }
+    PackageManager pm = getContext().getPackageManager();
+    Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+    List<ResolveInfo> apps = pm.queryIntentActivities(main, 0);
+    String bestLabel = null;
+    String bestPkg = null;
+    int bestScore = 0;
+    for (ResolveInfo ri : apps) {
+      String label = String.valueOf(ri.loadLabel(pm));
+      String l = label.toLowerCase();
+      int score = 0;
+      if (l.equals(name)) score = 100;
+      else if (l.startsWith(name)) score = 80;
+      else if (l.contains(name)) score = 60;
+      else if (name.contains(l) && l.length() > 3) score = 40;
+      if (score > bestScore) {
+        bestScore = score;
+        bestLabel = label;
+        bestPkg = ri.activityInfo.packageName;
+      }
+    }
+    if (bestPkg == null) {
+      call.reject("No installed app matches " + name);
+      return;
+    }
+    Intent launch = pm.getLaunchIntentForPackage(bestPkg);
+    if (launch == null) {
+      call.reject(bestLabel + " cannot be launched");
+      return;
+    }
+    getActivity().startActivity(launch);
+    JSObject r = new JSObject();
+    r.put("ok", true);
+    r.put("message", "Opened " + bestLabel);
+    call.resolve(r);
   }
 }
