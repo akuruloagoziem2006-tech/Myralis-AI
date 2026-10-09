@@ -33,6 +33,7 @@ export default function Home() {
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
   const [showCall, setShowCall] = useState(false);
+  const [showPlus, setShowPlus] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState("system");
   const [senseOn, setSenseOn] = useState(true);
@@ -588,7 +589,7 @@ To use Local AI:
             <div style={{ ...styles.statusLine, color: statusColor }}>{statusText}</div>
           </div>
         </div>
-          <button onClick={newChat} style={styles.newChatBtn}>+ New</button>
+          <button onClick={newChat} style={styles.newChatBtn} title="New chat">✎</button>
       </header>
 
       {/* Side Menu */}
@@ -771,6 +772,13 @@ To use Local AI:
 
       {/* Input */}
       <footer style={styles.footer}>
+        {showPlus && (
+          <div style={styles.plusMenu}>
+            <button onClick={() => { setShowPlus(false); fileInputRef.current?.click(); }} style={styles.plusRow}>🖼  Upload image</button>
+            <button onClick={() => { setShowPlus(false); setShowVision(true); }} style={styles.plusRow}>👁  Live vision</button>
+            <button onClick={() => { setShowPlus(false); setShowCall(true); }} style={styles.plusRow}>📞  Call Myralis</button>
+          </div>
+        )}
         <div style={{ ...styles.inputWrapper, background: c.inputBg, borderColor: c.border, color: c.text }}>
           <button
             onClick={speaking ? stopSpeaking : startListening}
@@ -783,9 +791,7 @@ To use Local AI:
           >
             {speaking ? "⏹" : listening ? "●" : "🎙"}
           </button>
-          <button onClick={() => fileInputRef.current?.click()} style={styles.toolBtn}>🖼</button>
-          <button onClick={() => setShowVision(true)} style={styles.toolBtn} title="Vision">👁</button>
-          <button onClick={() => setShowCall(true)} style={styles.toolBtn} title="Call Myralis">📞</button>
+          <button onClick={() => setShowPlus((v) => !v)} style={styles.toolBtn} title="More">＋</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <input
             style={{ ...styles.input, color: c.text }}
@@ -1428,5 +1434,7 @@ const styles = {
   bubble: { maxWidth: "100%", lineHeight: 1.65, fontSize: 15.5, wordBreak: "break-word" },
   assistantBubble: { alignSelf: "stretch", width: "100%", maxWidth: "100%", background: "transparent", border: "none", padding: "2px 2px", borderRadius: 0 },
   userBubble: { alignSelf: "flex-end", marginLeft: "auto", background: "#27272a", border: "none", borderRadius: "22px 22px 6px 22px", padding: "11px 16px", maxWidth: "min(85%, 460px)" },
-  inputWrapper: { display: "flex", alignItems: "center", gap: 6, borderRadius: 28, border: "1px solid #27272a", padding: "6px 8px 6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box" }
+  inputWrapper: { display: "flex", alignItems: "center", gap: 6, borderRadius: 28, border: "1px solid #27272a", padding: "6px 8px 6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box" },
+  plusMenu: { position: "absolute", bottom: 96, left: 14, zIndex: 50, background: "#18181b", border: "1px solid #27272a", borderRadius: 18, padding: 6, boxShadow: "0 12px 36px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", minWidth: 210 },
+  plusRow: { background: "transparent", border: "none", color: "#f4f4f5", textAlign: "left", padding: "12px 14px", borderRadius: 12, fontSize: 15 },
 };
