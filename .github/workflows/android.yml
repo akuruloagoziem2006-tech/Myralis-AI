@@ -43,27 +43,25 @@ jobs:
           if "registerPlugin" not in s:
               s = s.replace(
                   "public class MainActivity extends BridgeActivity {",
-                  "public class MainActivity extends BridgeActivity {\n  @Override\n  public void onCreate(android.os.Bundle savedInstanceState) {\n    registerPlugin(MyralisDevicePlugin.class);\n    super.onCreate(savedInstanceState);\n  }",
+                  "public class MainActivity extends BridgeActivity {\n  @Override\n  public void onCreate(android.os.Bundle savedInstanceState) {\n    registerPlugin(MyralisDevicePlugin.class);\n    registerPlugin(MyralisScreenPlugin.class);\n    registerPlugin(MyralisOverlayPlugin.class);\n    super.onCreate(savedInstanceState);\n  }",
                   1)
-          if "MyralisScreenPlugin" not in s:
-              s = s.replace("registerPlugin(MyralisDevicePlugin.class);",
-                  "registerPlugin(MyralisDevicePlugin.class);\n    registerPlugin(MyralisScreenPlugin.class);", 1)
           open(p, "w").write(s)
           m = "android/app/src/main/AndroidManifest.xml"
           t = open(m).read()
           perms = ["android.permission.READ_CALENDAR", "android.permission.READ_CONTACTS",
                    "android.permission.QUERY_ALL_PACKAGES", "android.permission.FOREGROUND_SERVICE",
-                   "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"]
+                   "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+                   "android.permission.SYSTEM_ALERT_WINDOW"]
           for perm in perms:
               if perm not in t:
                   t = t.replace("<application", '<uses-permission android:name="%s" />\n    <application' % perm, 1)
-          if "ScreenService" not in t:
+          if "OverlayService" not in t:
               t = t.replace("</application>",
-                  '    <service android:name="com.myralis.app.ScreenService" android:foregroundServiceType="mediaProjection" android:exported="false" />\n    </application>', 1)
+                  '    <service android:name="com.myralis.app.OverlayService" android:exported="false" />\n    </application>', 1)
           open(m, "w").write(t)
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
-          grep -n "uses-permission\|ScreenService" android/app/src/main/AndroidManifest.xml
+          grep -n "SYSTEM_ALERT_WINDOW\|OverlayService" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
