@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import VisionHUD from "./components/VisionHUD";
 import CallMode from "./components/CallMode";
+import { parseAction, runAction } from "./components/Actions";
 import SettingsPanel from "./components/SettingsPanel";
 import SpiderSense from "./components/SpiderSense";
 
@@ -34,6 +35,7 @@ export default function Home() {
   const [showVision, setShowVision] = useState(false);
   const [showCall, setShowCall] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState("system");
   const [senseOn, setSenseOn] = useState(true);
@@ -444,6 +446,15 @@ export default function Home() {
 
   async function sendMessageWithText(text, currentMessages = messages) {
     if ((!text.trim() && !image) || loading) return;
+    const act = !image ? parseAction(text) : null;
+    if (act) {
+      setInput("");
+      setMessages((prev) => [...prev, { role: "user", content: text.trim() }]);
+      const res = await runAction(act);
+      if (res.text) setMessages((prev) => [...prev, { role: "assistant", content: res.text }]);
+      if (res.pending) setPendingAction(res.pending);
+      return;
+    }
 
     const userMessage = text.trim() || "What do you see in this image?";
     setInput("");
@@ -782,6 +793,21 @@ To use Local AI:
 
       {/* Input */}
       <footer style={styles.footer}>
+        {pendingAction && (
+          <div style={{ position: "fixed", left: 12, right: 12, bottom: 104, zIndex: 60, background: "#18181b", border: "1px solid #27272a", borderRadius: 18, padding: 14, boxShadow: "0 12px 36px rgba(0,0,0,0.4)" }}>
+            <div style={{ color: "#f4f4f5", marginBottom: 12, lineHeight: 1.4 }}>{pendingAction.summary}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={async () => {
+                const p = pendingAction;
+                setPendingAction(null);
+                let t;
+                try { t = await p.run(); } catch (e) { t = "Couldn't do that: " + (e?.message || e); }
+                setMessages((prev) => [...prev, { role: "assistant", content: t }]);
+              }} style={{ flex: 1, padding: 11, borderRadius: 12, border: "none", background: "#f4f4f5", color: "#09090b", fontWeight: 600 }}>Confirm</button>
+              <button onClick={() => setPendingAction(null)} style={{ flex: 1, padding: 11, borderRadius: 12, border: "1px solid #3f3f46", background: "transparent", color: "#f4f4f5" }}>Cancel</button>
+            </div>
+          </div>
+        )}
         {showPlus && (
           <div style={styles.plusMenu}>
             <button onClick={() => { setShowPlus(false); fileInputRef.current?.click(); }} style={styles.plusRow}>🖼  Upload image</button>
