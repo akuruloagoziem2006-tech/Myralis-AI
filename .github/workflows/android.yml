@@ -48,19 +48,14 @@ jobs:
               open(p, "w").write(s)
           m = "android/app/src/main/AndroidManifest.xml"
           t = open(m).read()
-          for perm in ["android.permission.READ_CALENDAR", "android.permission.READ_CONTACTS"]:
+          perms = ["android.permission.READ_CALENDAR", "android.permission.READ_CONTACTS", "android.permission.QUERY_ALL_PACKAGES"]
+          for perm in perms:
               if perm not in t:
                   t = t.replace("<application", '<uses-permission android:name="%s" />\n    <application' % perm, 1)
-          pkgs = ["com.whatsapp", "com.whatsapp.w4b", "com.android.chrome", "com.google.android.apps.chrome",
-                  "com.google.android.youtube", "com.google.android.apps.maps", "com.google.android.gm",
-                  "com.android.camera", "com.android.camera2", "com.google.android.GoogleCamera", "com.android.settings"]
-          if t.count("<queries>") == 1:
-              extra = "".join('<package android:name="%s" />' % p_ for p_ in pkgs if p_ not in t)
-              t = t.replace("<queries>", "<queries>" + extra, 1)
           open(m, "w").write(t)
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
-          grep -n "READ_CALENDAR\|READ_CONTACTS\|<package" android/app/src/main/AndroidManifest.xml
+          grep -n "READ_CALENDAR\|READ_CONTACTS\|QUERY_ALL_PACKAGES" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
