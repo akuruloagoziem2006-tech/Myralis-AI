@@ -693,7 +693,7 @@ To use Local AI:
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble),
-                background: msg.role === "user" ? c.user : c.assistant,
+                background: msg.role === "user" ? c.user : "transparent",
                 color: msg.role === "user" ? c.userText : c.text
               }}>
                 {msg.image && <img src={msg.image} alt="upload" style={styles.image} />}
@@ -1423,5 +1423,10 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0
-  }
+  },
+  messageBlock: { display: "flex", flexDirection: "column", width: "100%", marginBottom: 22 },
+  bubble: { maxWidth: "100%", lineHeight: 1.65, fontSize: 15.5, wordBreak: "break-word" },
+  assistantBubble: { alignSelf: "stretch", width: "100%", maxWidth: "100%", background: "transparent", border: "none", padding: "2px 2px", borderRadius: 0 },
+  userBubble: { alignSelf: "flex-end", marginLeft: "auto", background: "#27272a", border: "none", borderRadius: "22px 22px 6px 22px", padding: "11px 16px", maxWidth: "min(85%, 460px)" },
+  inputWrapper: { display: "flex", alignItems: "center", gap: 6, borderRadius: 28, border: "1px solid #27272a", padding: "6px 8px 6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box" }
 };
