@@ -51,6 +51,7 @@ jobs:
           perms = ["android.permission.READ_CALENDAR", "android.permission.READ_CONTACTS",
                    "android.permission.QUERY_ALL_PACKAGES", "android.permission.FOREGROUND_SERVICE",
                    "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+                   "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
                    "android.permission.SYSTEM_ALERT_WINDOW"]
           for perm in perms:
               if perm not in t:
@@ -59,7 +60,7 @@ jobs:
           if "com.myralis.app.ScreenService" not in t:
               services += '    <service android:name="com.myralis.app.ScreenService" android:foregroundServiceType="mediaProjection" android:exported="false" />\n'
           if "com.myralis.app.OverlayService" not in t:
-              services += '    <service android:name="com.myralis.app.OverlayService" android:exported="false" />\n'
+              services += '    <service android:name="com.myralis.app.OverlayService" android:foregroundServiceType="specialUse" android:exported="false" />\n'
           if services:
               t = t.replace("</application>", services + "    </application>", 1)
           open(m, "w").write(t)
