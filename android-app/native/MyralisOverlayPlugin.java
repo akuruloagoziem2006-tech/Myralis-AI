@@ -33,4 +33,12 @@ public class MyralisOverlayPlugin extends Plugin {
     getContext().stopService(new Intent(getContext(), OverlayService.class));
     call.resolve();
   }
+
+  @PluginMethod
+  public void takePending(PluginCall call) {
+    JSObject r = new JSObject();
+    r.put("action", OverlayService.pendingAction);
+    OverlayService.pendingAction = "";
+    call.resolve(r);
+  }
 }

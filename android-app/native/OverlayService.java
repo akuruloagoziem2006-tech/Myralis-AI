@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -13,9 +15,11 @@ import android.view.WindowManager;
 import android.widget.TextView;
 
 public class OverlayService extends Service {
+  static volatile String pendingAction = "";
   private WindowManager wm;
   private TextView bubble;
   private WindowManager.LayoutParams lp;
+  private final Handler handler = new Handler(Looper.getMainLooper());
 
   @Override
   public IBinder onBind(Intent intent) { return null; }
@@ -47,7 +51,15 @@ public class OverlayService extends Service {
     bubble.setOnTouchListener(new View.OnTouchListener() {
       int startX, startY;
       float touchX, touchY;
-      boolean moved;
+      boolean moved, longPressed;
+      final Runnable longPress = new Runnable() {
+        @Override
+        public void run() {
+          longPressed = true;
+          pendingAction = "call";
+          openMyralis();
+        }
+      };
 
       @Override
       public boolean onTouch(View v, MotionEvent e) {
@@ -55,18 +67,31 @@ public class OverlayService extends Service {
           case MotionEvent.ACTION_DOWN:
             startX = lp.x; startY = lp.y;
             touchX = e.getRawX(); touchY = e.getRawY();
-            moved = false;
+            moved = false; longPressed = false;
+            handler.postDelayed(longPress, 500);
             return true;
           case MotionEvent.ACTION_MOVE:
             float dx = e.getRawX() - touchX;
             float dy = e.getRawY() - touchY;
-            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) moved = true;
-            lp.x = startX + (int) dx;
-            lp.y = startY + (int) dy;
-            wm.updateViewLayout(bubble, lp);
+            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+              moved = true;
+              handler.removeCallbacks(longPress);
+            }
+            if (moved) {
+              lp.x = startX + (int) dx;
+              lp.y = startY + (int) dy;
+              wm.updateViewLayout(bubble, lp);
+            }
             return true;
           case MotionEvent.ACTION_UP:
-            if (!moved) openMyralis();
+            handler.removeCallbacks(longPress);
+            if (!moved && !longPressed) {
+              pendingAction = "";
+              openMyralis();
+            }
+            return true;
+          case MotionEvent.ACTION_CANCEL:
+            handler.removeCallbacks(longPress);
             return true;
         }
         return false;
@@ -87,6 +112,7 @@ public class OverlayService extends Service {
 
   @Override
   public void onDestroy() {
+    handler.removeCallbacksAndMessages(null);
     if (bubble != null) {
       try { wm.removeView(bubble); } catch (Exception e) { }
       bubble = null;

@@ -34,6 +34,25 @@ export default function Home() {
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
   const [showCall, setShowCall] = useState(false);
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const P = window.Capacitor?.Plugins?.MyralisOverlay;
+        if (!P || !window.Capacitor?.isNativePlatform?.()) return;
+        const r = await P.takePending();
+        if (r && r.action === "call") setShowCall(true);
+      } catch {}
+    };
+    const onVis = () => { if (!document.hidden) check(); };
+    check();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", check);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
   const [callScreen, setCallScreen] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
