@@ -188,7 +188,7 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
         history.current.push({ role: "user", content: text }, { role: "assistant", content: reply });
         if (onTurn) onTurn(text, reply);
       } catch (e) {
-        reply = "Sorry, I couldn't reach my brain just now. Try again.";
+        reply = "Brain error: " + ((e && e.message) || "unknown");
       }
       if (!live()) return;
       setCaption(reply);
