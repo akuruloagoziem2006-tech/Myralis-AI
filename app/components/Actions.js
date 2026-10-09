@@ -38,7 +38,7 @@ export function parseAction(text) {
   if (/^(what'?s on my calendar|my schedule|today'?s (events|schedule)|calendar today)/.test(t)) return { type: "calendar" };
   if ((m = t.match(/^(?:call|dial|phone) (.+)$/))) return { type: "call", name: m[1] };
   if ((m = t.match(/^share (.+)$/))) return { type: "share", text: raw.slice(6) };
-  if ((m = t.match(/^open (\w+)$/)) && PKG[m[1]]) return { type: "open", app: m[1] };
+  if ((m = t.match(/^open (.+)$/))) return { type: "open", app: m[1].trim() };
   return null;
 }
 
@@ -84,13 +84,12 @@ export async function runAction(act) {
       return { text: "Opened the share sheet. Pick an app and send it yourself." };
     }
     if (act.type === "open") {
-      for (const pkg of PKG[act.app] || []) {
-        try {
-          await P.openApp({ package: pkg });
-          return { text: `Opened ${act.app}.` };
-        } catch {}
+      try {
+        await P.openByName({ name: act.app });
+        return { text: `Opened ${act.app}.` };
+      } catch (e) {
+        return { text: "I couldn't open that: " + (e?.message || e) };
       }
-      return { text: `I couldn't find ${act.app} on this phone. Check it's installed.` };
     }
     if (act.type === "call") {
       const c = await P.findContact({ name: act.name });
