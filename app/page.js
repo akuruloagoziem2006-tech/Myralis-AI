@@ -34,6 +34,7 @@ export default function Home() {
   const [localStatus, setLocalStatus] = useState("unknown");
   const [showVision, setShowVision] = useState(false);
   const [showCall, setShowCall] = useState(false);
+  const [callScreen, setCallScreen] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -801,7 +802,8 @@ To use Local AI:
           <div style={styles.plusMenu}>
             <button onClick={() => { setShowPlus(false); fileInputRef.current?.click(); }} style={styles.plusRow}>🖼  Upload image</button>
             <button onClick={() => { setShowPlus(false); setShowVision(true); }} style={styles.plusRow}>👁  Live vision</button>
-            <button onClick={() => { setShowPlus(false); setShowCall(true); }} style={styles.plusRow}>📞  Call Myralis</button>
+            <button onClick={() => { setShowPlus(false); setCallScreen(false); setShowCall(true); }} style={styles.plusRow}>📞  Call Myralis</button>
+            <button onClick={() => { setShowPlus(false); setCallScreen(true); setShowCall(true); }} style={styles.plusRow}>🖥  Live screen</button>
           </div>
         )}
         <div style={{ ...styles.inputWrapper, background: c.inputBg, borderColor: c.border, color: c.text }}>
@@ -816,6 +818,7 @@ To use Local AI:
           >
             {speaking ? "⏹" : listening ? "●" : "🎙"}
           </button>
+          <button onClick={() => { setCallScreen(false); setShowCall(true); }} style={styles.toolBtn} title="Call Myralis">📞</button>
           <button onClick={() => setShowPlus((v) => !v)} style={styles.toolBtn} title="More">＋</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <input
@@ -851,7 +854,7 @@ To use Local AI:
       onNewChat={() => { setShowSettings(false); newChat(); }}
     />
     {showCall && (
-      <CallMode memory={memory} onClose={() => setShowCall(false)} onTurn={(u, a) => setMessages((prev) => [...prev, { role: "user", content: u }, { role: "assistant", content: a }])} />
+      <CallMode memory={memory} screen={callScreen} onClose={() => { setShowCall(false); setCallScreen(false); }} onTurn={(u, a) => setMessages((prev) => [...prev, { role: "user", content: u }, { role: "assistant", content: a }])} />
     )}
     {showVision && (
       <VisionHUD

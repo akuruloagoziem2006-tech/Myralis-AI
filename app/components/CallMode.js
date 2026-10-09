@@ -58,7 +58,7 @@ function speakWeb(text, synthRef) {
   });
 }
 
-export default function CallMode({ onClose, onTurn, memory }) {
+export default function CallMode({ onClose, onTurn, memory, screen }) {
   const [phase, setPhase] = useState("connecting");
   const [caption, setCaption] = useState("");
   const [heard, setHeard] = useState("");
@@ -104,10 +104,17 @@ export default function CallMode({ onClose, onTurn, memory }) {
 
   async function ask(text) {
     const msgs = [...history.current, { role: "user", content: text }].slice(-12);
-    const res = await fetch("/api/voice", {
+    let image = "";
+    if (screen) {
+      try {
+        const P5 = nativePlugins();
+        if (P5 && P5.MyralisScreen) { const f = await P5.MyralisScreen.frame(); image = (f && f.image) || ""; }
+      } catch {}
+    }
+    const res = await fetch(screen ? "/api/screen" : "/api/voice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: msgs, memory })
+      body: JSON.stringify({ messages: msgs, memory, image })
     });
     let data = {};
     try { data = await res.json(); } catch {}
@@ -134,6 +141,16 @@ export default function CallMode({ onClose, onTurn, memory }) {
     } else if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
       fail("This browser has no speech recognition. Use Chrome or the Myralis app.");
       return;
+    }
+    if (screen) {
+      try {
+        const P2 = nativePlugins();
+        if (!P2 || !P2.MyralisScreen) { fail("Live screen needs the Myralis Android app."); return; }
+        await P2.MyralisScreen.start();
+      } catch (e) {
+        fail("Screen sharing was not allowed.");
+        return;
+      }
     }
     await say("Hi, go ahead. I'm listening.");
     while (live()) {
@@ -181,6 +198,7 @@ export default function CallMode({ onClose, onTurn, memory }) {
 
   function endCall() {
     alive.current = false;
+    try { const P4 = nativePlugins(); if (screen && P4 && P4.MyralisScreen) quiet(P4.MyralisScreen.stop()); } catch {}
     loopId.current += 1;
     stopListening();
     stopSpeaking();
@@ -237,7 +255,7 @@ export default function CallMode({ onClose, onTurn, memory }) {
     <div style={styles.overlay}>
       <style>{"@keyframes myralisPulse{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}"}</style>
       <div style={styles.top}>
-        <div style={styles.name}>Myralis</div>
+        <div style={styles.name}>Myralis{screen ? " · Live screen" : ""}</div>
         <div style={styles.timer}>{mm}:{ss}</div>
       </div>
       <div style={styles.middle}>
