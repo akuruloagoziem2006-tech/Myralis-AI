@@ -63,10 +63,13 @@ jobs:
               services += '    <service android:name="com.myralis.app.OverlayService" android:foregroundServiceType="specialUse" android:exported="false" />\n'
           if services:
               t = t.replace("</application>", services + "    </application>", 1)
+          if "AssistantActivity" not in t:
+              t = t.replace("</application>",
+                  '    <activity android:name="com.myralis.app.AssistantActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:exported="false" android:excludeFromRecents="true" android:windowSoftInputMode="adjustResize" />\n    </application>', 1)
           open(m, "w").write(t)
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
-          grep -n "uses-permission\|<service" android/app/src/main/AndroidManifest.xml
+          grep -n "uses-permission\|<service\|<activity" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
