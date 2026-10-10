@@ -311,6 +311,14 @@ public class OverlayService extends Service {
   private void send(String raw) {
     final String text = raw == null ? "" : raw.trim();
     if (text.isEmpty() || busy) return;
+    String local = handleCommand(text);
+    if (local != null) {
+      input.setText("");
+      statusView.setText("");
+      replyView.setText(local);
+      if (tts != null) tts.speak(local, TextToSpeech.QUEUE_FLUSH, null, "myralis");
+      return;
+    }
     busy = true;
     input.setText("");
     setPanelFocusable(false);
@@ -360,6 +368,133 @@ public class OverlayService extends Service {
         }
       });
     }).start();
+  }
+
+  private String handleCommand(String raw) {
+    try {
+      String t = raw.trim().toLowerCase(Locale.US);
+      java.util.regex.Matcher m;
+
+      m = java.util.regex.Pattern.compile("^(?:set (?:an? )?alarm|wake me)(?: up)? (?:for|at) (\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?$").matcher(t);
+      if (m.find()) {
+        int h = Integer.parseInt(m.group(1));
+        int min = m.group(2) == null ? 0 : Integer.parseInt(m.group(2));
+        String ap = m.group(3);
+        if ("pm".equals(ap) && h < 12) h += 12;
+        if ("am".equals(ap) && h == 12) h = 0;
+        if (h > 23 || min > 59) return "That time doesn't look right.";
+        Intent i = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
+            .putExtra(android.provider.AlarmClock.EXTRA_HOUR, h)
+            .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, min)
+            .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, "Myralis alarm")
+            .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        return String.format(Locale.US, "Alarm set for %02d:%02d.", h, min);
+      }
+
+      m = java.util.regex.Pattern.compile("^(?:set )?(?:a )?timer (?:for )?(\\d+)\\s*(sec|second|min|minute|hour)s?$").matcher(t);
+      if (m.find()) {
+        int n = Integer.parseInt(m.group(1));
+        String unit = m.group(2);
+        int secs = unit.startsWith("h") ? n * 3600 : unit.startsWith("m") ? n * 60 : n;
+        Intent i = new Intent(android.provider.AlarmClock.ACTION_SET_TIMER)
+            .putExtra(android.provider.AlarmClock.EXTRA_LENGTH, secs)
+            .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, "Myralis timer")
+            .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        return "Timer started for " + secs + " seconds.";
+      }
+
+      if (t.startsWith("battery")) {
+        Intent b = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (b == null) return "Battery info is unavailable.";
+        int level = b.getIntExtra("level", -1);
+        int scale = b.getIntExtra("scale", 100);
+        int status = b.getIntExtra("status", -1);
+        boolean charging = status == 2 || status == 5;
+        return "Battery is at " + Math.round(level * 100f / scale) + "%" + (charging ? " and charging." : ".");
+      }
+
+      m = java.util.regex.Pattern.compile("^open (.+)$").matcher(t);
+      if (m.find()) {
+        String name = m.group(1).trim();
+        String pkg = findPackage(name);
+        if (pkg == null) return "No installed app matches " + name + ".";
+        Intent launch = getPackageManager().getLaunchIntentForPackage(pkg);
+        if (launch == null) return name + " can't be launched.";
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(launch);
+        return "Opened " + name + ".";
+      }
+
+      if (t.startsWith("share ")) {
+        String text = raw.trim().substring(6);
+        Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
+        startActivity(Intent.createChooser(s, "Share with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        return "Opened the share sheet. Pick an app to send it.";
+      }
+
+      m = java.util.regex.Pattern.compile("^(?:call|dial|phone) (.+)$").matcher(t);
+      if (m.find()) {
+        String who = m.group(1).trim();
+        if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+          return "Allow contacts for Myralis in Settings, Apps, Myralis, Permissions, then try again.";
+        }
+        String[] found = findNumber(who);
+        if (found == null) return "No contact matching " + who + ".";
+        Intent d = new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + android.net.Uri.encode(found[1])))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(d);
+        return "Dialer open for " + found[0] + ". Press call to ring them.";
+      }
+      return null;
+    } catch (Exception e) {
+      return "Couldn't do that: " + e.getMessage();
+    }
+  }
+
+  private String findPackage(String name) {
+    android.content.pm.PackageManager pm = getPackageManager();
+    Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+    java.util.List<android.content.pm.ResolveInfo> apps = pm.queryIntentActivities(main, 0);
+    String best = null;
+    int bestScore = 0;
+    for (android.content.pm.ResolveInfo ri : apps) {
+      String l = String.valueOf(ri.loadLabel(pm)).toLowerCase(Locale.US);
+      int score = 0;
+      if (l.equals(name)) score = 100;
+      else if (l.startsWith(name)) score = 80;
+      else if (l.contains(name)) score = 60;
+      else if (name.contains(l) && l.length() > 3) score = 40;
+      if (score > bestScore) {
+        bestScore = score;
+        best = ri.activityInfo.packageName;
+      }
+    }
+    return best;
+  }
+
+  private String[] findNumber(String name) {
+    android.content.ContentResolver cr = getContentResolver();
+    String id = null;
+    String display = null;
+    try (android.database.Cursor cur = cr.query(android.provider.ContactsContract.Contacts.CONTENT_URI,
+        new String[]{android.provider.ContactsContract.Contacts._ID, android.provider.ContactsContract.Contacts.DISPLAY_NAME},
+        android.provider.ContactsContract.Contacts.DISPLAY_NAME + " LIKE ?",
+        new String[]{"%" + name + "%"}, null)) {
+      if (cur == null || !cur.moveToFirst()) return null;
+      id = cur.getString(0);
+      display = cur.getString(1);
+    }
+    try (android.database.Cursor ph = cr.query(android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+        new String[]{android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER},
+        android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+        new String[]{id}, null)) {
+      if (ph == null || !ph.moveToFirst()) return null;
+      return new String[]{display, ph.getString(0)};
+    }
   }
 
   private void startAsForeground() {
