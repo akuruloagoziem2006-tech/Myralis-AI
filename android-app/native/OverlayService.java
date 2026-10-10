@@ -1,35 +1,80 @@
 package com.myralis.app;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class OverlayService extends Service {
   static volatile String pendingAction = "";
   private static final int NOTE_ID = 88;
+  private static final String API = "https://myralis-ai.vercel.app/api/voice";
+
+  private final Handler handler = new Handler(Looper.getMainLooper());
+  private final List<JSONObject> history = new ArrayList<>();
   private WindowManager wm;
   private TextView bubble;
-  private WindowManager.LayoutParams lp;
-  private final Handler handler = new Handler(Looper.getMainLooper());
+  private WindowManager.LayoutParams bubbleLp;
+  private LinearLayout panel;
+  private WindowManager.LayoutParams panelLp;
+  private TextView replyView;
+  private TextView statusView;
+  private EditText input;
+  private SpeechRecognizer recognizer;
+  private TextToSpeech tts;
+  private boolean panelOpen;
+  private boolean busy;
+  private int startX, startY;
+  private float touchX, touchY;
+  private boolean moved, longPressed;
+
+  private final Runnable longPressRun = () -> {
+    longPressed = true;
+    pendingAction = "call";
+    openMyralis();
+  };
+
   private final Runnable watchdog = new Runnable() {
     @Override
     public void run() {
       if (bubble != null && !bubble.isAttachedToWindow()) {
-        try { wm.addView(bubble, lp); } catch (Exception e) { }
+        try { wm.addView(bubble, bubbleLp); } catch (Exception e) { }
       }
       if (bubble != null) handler.postDelayed(this, 2000);
     }
@@ -39,10 +84,23 @@ public class OverlayService extends Service {
   public IBinder onBind(Intent intent) { return null; }
 
   @Override
+  public void onCreate() {
+    super.onCreate();
+    wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+    if (SpeechRecognizer.isRecognitionAvailable(this)) {
+      recognizer = SpeechRecognizer.createSpeechRecognizer(this);
+      recognizer.setRecognitionListener(listener);
+    }
+    tts = new TextToSpeech(this, st -> {
+      if (st == TextToSpeech.SUCCESS && tts != null) tts.setLanguage(Locale.US);
+    });
+  }
+
+  @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     startAsForeground();
     if (bubble != null) return START_STICKY;
-    wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+
     bubble = new TextView(this);
     bubble.setText("✧");
     bubble.setTextSize(22);
@@ -53,69 +111,255 @@ public class OverlayService extends Service {
     g.setColor(0xFF7C3AED);
     bubble.setBackground(g);
 
-    int size = (int) (56 * getResources().getDisplayMetrics().density);
-    int type = Build.VERSION.SDK_INT >= 26
-        ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        : WindowManager.LayoutParams.TYPE_PHONE;
-    lp = new WindowManager.LayoutParams(size, size, type,
+    int size = dp(56);
+    bubbleLp = new WindowManager.LayoutParams(size, size, overlayType(),
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
-    lp.gravity = Gravity.TOP | Gravity.START;
-    lp.x = 20;
-    lp.y = 300;
+    bubbleLp.gravity = Gravity.TOP | Gravity.START;
+    bubbleLp.x = 20;
+    bubbleLp.y = 300;
 
-    bubble.setOnTouchListener(new View.OnTouchListener() {
-      int startX, startY;
-      float touchX, touchY;
-      boolean moved, longPressed;
-      final Runnable longPress = new Runnable() {
-        @Override
-        public void run() {
-          longPressed = true;
-          pendingAction = "call";
-          openMyralis();
+    bubble.setOnTouchListener((v, e) -> {
+      switch (e.getAction()) {
+        case MotionEvent.ACTION_DOWN: {
+          startX = bubbleLp.x; startY = bubbleLp.y;
+          touchX = e.getRawX(); touchY = e.getRawY();
+          moved = false; longPressed = false;
+          handler.postDelayed(longPressRun, 500);
+          return true;
         }
-      };
-
-      @Override
-      public boolean onTouch(View v, MotionEvent e) {
-        switch (e.getAction()) {
-          case MotionEvent.ACTION_DOWN:
-            startX = lp.x; startY = lp.y;
-            touchX = e.getRawX(); touchY = e.getRawY();
-            moved = false; longPressed = false;
-            handler.postDelayed(longPress, 500);
-            return true;
-          case MotionEvent.ACTION_MOVE:
-            float dx = e.getRawX() - touchX;
-            float dy = e.getRawY() - touchY;
-            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-              moved = true;
-              handler.removeCallbacks(longPress);
-            }
-            if (moved) {
-              lp.x = startX + (int) dx;
-              lp.y = startY + (int) dy;
-              wm.updateViewLayout(bubble, lp);
-            }
-            return true;
-          case MotionEvent.ACTION_UP:
-            handler.removeCallbacks(longPress);
-            if (!moved && !longPressed) {
-              pendingAction = "";
-              openAssistant();
-            }
-            return true;
-          case MotionEvent.ACTION_CANCEL:
-            handler.removeCallbacks(longPress);
-            return true;
+        case MotionEvent.ACTION_MOVE: {
+          float dx = e.getRawX() - touchX;
+          float dy = e.getRawY() - touchY;
+          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+            moved = true;
+            handler.removeCallbacks(longPressRun);
+          }
+          if (moved) {
+            bubbleLp.x = startX + (int) dx;
+            bubbleLp.y = startY + (int) dy;
+            wm.updateViewLayout(bubble, bubbleLp);
+          }
+          return true;
         }
-        return false;
+        case MotionEvent.ACTION_UP: {
+          handler.removeCallbacks(longPressRun);
+          if (!moved && !longPressed) {
+            pendingAction = "";
+            togglePanel();
+          }
+          return true;
+        }
+        case MotionEvent.ACTION_CANCEL:
+          handler.removeCallbacks(longPressRun);
+          return true;
       }
+      return false;
     });
 
-    wm.addView(bubble, lp);
+    wm.addView(bubble, bubbleLp);
     handler.postDelayed(watchdog, 2000);
     return START_STICKY;
+  }
+
+  private int overlayType() {
+    return Build.VERSION.SDK_INT >= 26
+        ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        : WindowManager.LayoutParams.TYPE_PHONE;
+  }
+
+  private void togglePanel() {
+    if (panelOpen) { closePanel(); return; }
+    if (panel == null) buildPanel();
+    panelLp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
+    panelLp.gravity = Gravity.BOTTOM;
+    panelLp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
+    wm.addView(panel, panelLp);
+    panelOpen = true;
+    statusView.setText("Ask anything, or tap Talk.");
+  }
+
+  private void closePanel() {
+    setPanelFocusable(false);
+    if (panelOpen) {
+      try { wm.removeView(panel); } catch (Exception e) { }
+      panelOpen = false;
+    }
+  }
+
+  private void setPanelFocusable(boolean on) {
+    if (!panelOpen || panelLp == null) return;
+    if (on) panelLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+    else panelLp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+    try { wm.updateViewLayout(panel, panelLp); } catch (Exception e) { }
+  }
+
+  private void focusForTyping() {
+    setPanelFocusable(true);
+    handler.postDelayed(() -> {
+      input.requestFocus();
+      InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+      if (imm != null) imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+    }, 200);
+  }
+
+  private void buildPanel() {
+    panel = new LinearLayout(this);
+    panel.setOrientation(LinearLayout.VERTICAL);
+    panel.setPadding(dp(16), dp(14), dp(16), dp(14));
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF18181B);
+    bg.setCornerRadii(new float[]{dp(22), dp(22), dp(22), dp(22), 0, 0, 0, 0});
+    panel.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText("✧  Myralis");
+    title.setTextColor(0xFFFFFFFF);
+    title.setTextSize(17);
+    title.setTypeface(null, android.graphics.Typeface.BOLD);
+    panel.addView(title);
+
+    statusView = new TextView(this);
+    statusView.setTextColor(0xFF9CA3AF);
+    statusView.setTextSize(13);
+    panel.addView(statusView);
+
+    replyView = new TextView(this);
+    replyView.setTextColor(0xFFF4F4F5);
+    replyView.setTextSize(16);
+    replyView.setLineSpacing(0, 1.2f);
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(replyView);
+    LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(240));
+    sl.topMargin = dp(12);
+    panel.addView(scroll, sl);
+
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    input = new EditText(this);
+    input.setHint("Ask Myralis...");
+    input.setHintTextColor(0xFF71717A);
+    input.setTextColor(0xFFFFFFFF);
+    input.setSingleLine(true);
+    input.setImeOptions(EditorInfo.IME_ACTION_SEND);
+    input.setOnClickListener(v -> focusForTyping());
+    input.setOnEditorActionListener((v, actionId, ev) -> {
+      send(input.getText().toString());
+      return true;
+    });
+    row.addView(input, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+    Button sendBtn = pill("Send", 0xFF8B5CF6);
+    sendBtn.setOnClickListener(v -> send(input.getText().toString()));
+    row.addView(sendBtn, new LinearLayout.LayoutParams(dp(76), dp(48)));
+    LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    rl.topMargin = dp(10);
+    panel.addView(row, rl);
+
+    LinearLayout bottom = new LinearLayout(this);
+    bottom.setOrientation(LinearLayout.HORIZONTAL);
+    Button talk = pill("🎙  Talk", 0xFF0E7490);
+    talk.setOnClickListener(v -> startListening());
+    bottom.addView(talk, new LinearLayout.LayoutParams(0, dp(46), 1f));
+    Button open = pill("Open app", 0xFF27272A);
+    open.setOnClickListener(v -> { closePanel(); openMyralis(); });
+    LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(0, dp(46), 1f);
+    ol.leftMargin = dp(10);
+    bottom.addView(open, ol);
+    Button close = pill("Close", 0xFF27272A);
+    close.setOnClickListener(v -> closePanel());
+    LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(0, dp(46), 1f);
+    cl.leftMargin = dp(10);
+    bottom.addView(close, cl);
+    LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    bl.topMargin = dp(10);
+    panel.addView(bottom, bl);
+  }
+
+  private final RecognitionListener listener = new RecognitionListener() {
+    @Override public void onReadyForSpeech(Bundle p) { if (statusView != null) statusView.setText("Listening..."); }
+    @Override public void onBeginningOfSpeech() { }
+    @Override public void onRmsChanged(float f) { }
+    @Override public void onBufferReceived(byte[] b) { }
+    @Override public void onEndOfSpeech() { if (statusView != null) statusView.setText("Thinking..."); }
+    @Override public void onError(int e) { if (statusView != null) statusView.setText("Didn't catch that. Tap Talk to try again."); }
+    @Override public void onResults(Bundle r) {
+      ArrayList<String> m = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+      if (m != null && !m.isEmpty()) send(m.get(0));
+    }
+    @Override public void onPartialResults(Bundle p) { }
+    @Override public void onEvent(int t, Bundle p) { }
+  };
+
+  private void startListening() {
+    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+      statusView.setText("Allow microphone for Myralis in Settings, Apps, Myralis, Permissions.");
+      return;
+    }
+    if (recognizer == null) {
+      statusView.setText("Voice isn't available on this phone. Type your question instead.");
+      return;
+    }
+    Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+    statusView.setText("Listening...");
+    recognizer.startListening(i);
+  }
+
+  private void send(String raw) {
+    final String text = raw == null ? "" : raw.trim();
+    if (text.isEmpty() || busy) return;
+    busy = true;
+    input.setText("");
+    setPanelFocusable(false);
+    statusView.setText("Thinking...");
+    final JSONObject user = msg("user", text);
+    final List<JSONObject> msgs = new ArrayList<>(history);
+    msgs.add(user);
+    new Thread(() -> {
+      String reply = "";
+      boolean ok = false;
+      try {
+        JSONArray arr = new JSONArray();
+        for (int i = Math.max(0, msgs.size() - 10); i < msgs.size(); i++) arr.put(msgs.get(i));
+        JSONObject body = new JSONObject().put("messages", arr).put("memory", "");
+        HttpURLConnection c = (HttpURLConnection) new URL(API).openConnection();
+        c.setRequestMethod("POST");
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(60000);
+        c.setDoOutput(true);
+        c.setRequestProperty("Content-Type", "application/json");
+        try (OutputStream os = c.getOutputStream()) {
+          os.write(body.toString().getBytes("UTF-8"));
+        }
+        int code = c.getResponseCode();
+        String resp = readAll(code < 400 ? c.getInputStream() : c.getErrorStream());
+        JSONObject j = new JSONObject(resp);
+        if (j.has("reply")) {
+          reply = j.getString("reply");
+          ok = true;
+        } else {
+          reply = j.optString("error", "No reply from Myralis.");
+        }
+      } catch (Exception e) {
+        reply = "Couldn't reach Myralis: " + e.getMessage();
+      }
+      final String out = reply;
+      final boolean good = ok;
+      handler.post(() -> {
+        busy = false;
+        statusView.setText("");
+        replyView.setText(out);
+        if (good) {
+          history.add(user);
+          history.add(msg("assistant", out));
+          while (history.size() > 10) history.remove(0);
+          if (tts != null) tts.speak(out, TextToSpeech.QUEUE_FLUSH, null, "myralis");
+        }
+      });
+    }).start();
   }
 
   private void startAsForeground() {
@@ -128,7 +372,7 @@ public class OverlayService extends Service {
       nb = new Notification.Builder(this);
     }
     Notification n = nb.setContentTitle("Myralis bubble is on")
-        .setContentText("Tap the bubble to open. Long-press to start a call.")
+        .setContentText("Tap the bubble to ask. Long-press to start a call.")
         .setSmallIcon(android.R.drawable.ic_menu_view)
         .setOngoing(true)
         .build();
@@ -139,12 +383,6 @@ public class OverlayService extends Service {
     }
   }
 
-  private void openAssistant() {
-    Intent i = new Intent(this, AssistantActivity.class);
-    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-    startActivity(i);
-  }
-
   private void openMyralis() {
     Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
     if (i != null) {
@@ -153,13 +391,49 @@ public class OverlayService extends Service {
     }
   }
 
+  private static JSONObject msg(String role, String content) {
+    try {
+      return new JSONObject().put("role", role).put("content", content);
+    } catch (Exception e) {
+      return new JSONObject();
+    }
+  }
+
+  private static String readAll(InputStream is) throws Exception {
+    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+    byte[] buf = new byte[4096];
+    int n;
+    while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+    is.close();
+    return bo.toString("UTF-8");
+  }
+
+  private Button pill(String label, int color) {
+    Button b = new Button(this);
+    b.setText(label);
+    b.setAllCaps(false);
+    b.setTextColor(0xFFFFFFFF);
+    GradientDrawable d = new GradientDrawable();
+    d.setColor(color);
+    d.setCornerRadius(dp(24));
+    b.setBackground(d);
+    return b;
+  }
+
+  private int dp(int v) {
+    return Math.round(v * getResources().getDisplayMetrics().density);
+  }
+
   @Override
   public void onDestroy() {
     handler.removeCallbacksAndMessages(null);
+    closePanel();
     if (bubble != null) {
       try { wm.removeView(bubble); } catch (Exception e) { }
       bubble = null;
     }
+    if (recognizer != null) recognizer.destroy();
+    if (tts != null) tts.shutdown();
     stopForeground(true);
     super.onDestroy();
   }
