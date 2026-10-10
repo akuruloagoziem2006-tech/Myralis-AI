@@ -25,6 +25,15 @@ public class OverlayService extends Service {
   private TextView bubble;
   private WindowManager.LayoutParams lp;
   private final Handler handler = new Handler(Looper.getMainLooper());
+  private final Runnable watchdog = new Runnable() {
+    @Override
+    public void run() {
+      if (bubble != null && !bubble.isAttachedToWindow()) {
+        try { wm.addView(bubble, lp); } catch (Exception e) { }
+      }
+      if (bubble != null) handler.postDelayed(this, 2000);
+    }
+  };
 
   @Override
   public IBinder onBind(Intent intent) { return null; }
@@ -105,6 +114,7 @@ public class OverlayService extends Service {
     });
 
     wm.addView(bubble, lp);
+    handler.postDelayed(watchdog, 2000);
     return START_STICKY;
   }
 
