@@ -141,7 +141,7 @@ public class OverlayService extends Service {
 
   private void openAssistant() {
     Intent i = new Intent(this, AssistantActivity.class);
-    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
     startActivity(i);
   }
 

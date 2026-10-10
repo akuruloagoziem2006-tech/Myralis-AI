@@ -103,9 +103,9 @@ public class AssistantActivity extends Activity {
       return true;
     });
     row.addView(input, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-    Button sendBtn = pill("↑", 0xFF8B5CF6);
+    Button sendBtn = pill("Send", 0xFF8B5CF6);
     sendBtn.setOnClickListener(v -> send(input.getText().toString()));
-    row.addView(sendBtn, new LinearLayout.LayoutParams(dp(48), dp(48)));
+    row.addView(sendBtn, new LinearLayout.LayoutParams(dp(76), dp(48)));
     LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
     rl.topMargin = dp(10);
     panel.addView(row, rl);
