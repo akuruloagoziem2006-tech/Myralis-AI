@@ -65,7 +65,7 @@ jobs:
               t = t.replace("</application>", services + "    </application>", 1)
           if "AssistantActivity" not in t:
               t = t.replace("</application>",
-                  '    <activity android:name="com.myralis.app.AssistantActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:exported="false" android:excludeFromRecents="true" android:windowSoftInputMode="adjustResize" />\n    </application>', 1)
+                  '    <activity android:name="com.myralis.app.AssistantActivity" android:taskAffinity="com.myralis.app.assistant" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:exported="false" android:excludeFromRecents="true" android:windowSoftInputMode="adjustResize" />\n    </application>', 1)
           open(m, "w").write(t)
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
