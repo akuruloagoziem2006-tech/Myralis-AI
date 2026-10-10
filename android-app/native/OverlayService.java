@@ -102,7 +102,7 @@ public class OverlayService extends Service {
             handler.removeCallbacks(longPress);
             if (!moved && !longPressed) {
               pendingAction = "";
-              openMyralis();
+              openAssistant();
             }
             return true;
           case MotionEvent.ACTION_CANCEL:
@@ -137,6 +137,12 @@ public class OverlayService extends Service {
     } else {
       startForeground(NOTE_ID, n);
     }
+  }
+
+  private void openAssistant() {
+    Intent i = new Intent(this, AssistantActivity.class);
+    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    startActivity(i);
   }
 
   private void openMyralis() {
