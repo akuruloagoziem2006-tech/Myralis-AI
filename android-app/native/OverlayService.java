@@ -214,7 +214,7 @@ public class OverlayService extends Service {
     panel.setBackground(bg);
 
     TextView title = new TextView(this);
-    title.setText("✧  Myralis");
+    title.setText("✧  Myralis  · cmd v2");
     title.setTextColor(0xFFFFFFFF);
     title.setTextSize(17);
     title.setTypeface(null, android.graphics.Typeface.BOLD);
