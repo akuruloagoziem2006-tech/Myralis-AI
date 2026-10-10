@@ -393,7 +393,7 @@ public class OverlayService extends Service {
         return String.format(Locale.US, "Alarm set for %02d:%02d.", h, min);
       }
 
-      m = java.util.regex.Pattern.compile("^(?:set )?(?:a )?timer (?:for )?(\\d+)\\s*(sec|second|min|minute|hour)s?$").matcher(t);
+      m = java.util.regex.Pattern.compile("(?:timer|countdown)\\D*(\\d+)\\s*(sec|second|min|minute|hour)s?").matcher(t);
       if (m.find()) {
         int n = Integer.parseInt(m.group(1));
         String unit = m.group(2);
@@ -407,7 +407,7 @@ public class OverlayService extends Service {
         return "Timer started for " + secs + " seconds.";
       }
 
-      if (t.startsWith("battery")) {
+      if (t.contains("battery") && !t.startsWith("open") && !t.startsWith("share")) {
         Intent b = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (b == null) return "Battery info is unavailable.";
         int level = b.getIntExtra("level", -1);
@@ -417,7 +417,7 @@ public class OverlayService extends Service {
         return "Battery is at " + Math.round(level * 100f / scale) + "%" + (charging ? " and charging." : ".");
       }
 
-      m = java.util.regex.Pattern.compile("^open (.+)$").matcher(t);
+      m = java.util.regex.Pattern.compile("^(?:open|launch|start|run) (.+)$").matcher(t);
       if (m.find()) {
         String name = m.group(1).trim();
         String pkg = findPackage(name);
@@ -436,7 +436,7 @@ public class OverlayService extends Service {
         return "Opened the share sheet. Pick an app to send it.";
       }
 
-      m = java.util.regex.Pattern.compile("^(?:call|dial|phone) (.+)$").matcher(t);
+      m = java.util.regex.Pattern.compile("^(?:call|dial|phone|ring) (.+)$").matcher(t);
       if (m.find()) {
         String who = m.group(1).trim();
         if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
