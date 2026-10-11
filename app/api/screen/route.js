@@ -1,4 +1,4 @@
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash"];
 
@@ -32,7 +32,7 @@ What you know about the user: ${String(memory || "nothing yet").slice(0, 1500)}`
     const attempts = [];
     const started = Date.now();
     for (const model of MODELS) {
-      const budget = Math.min(12000, 26000 - (Date.now() - started));
+      const budget = Math.min(20000, 50000 - (Date.now() - started));
       if (budget < 3000) break;
       try {
         const res = await fetch(

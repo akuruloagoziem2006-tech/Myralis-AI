@@ -10,6 +10,24 @@ function nativePlugins() {
   return null;
 }
 
+function shrinkFrame(dataUrl) {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 512 / img.width);
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL("image/jpeg", 0.6));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch { resolve(dataUrl); }
+  });
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const quiet = (p) => { try { if (p && p.catch) p.catch(() => {}); } catch {} };
 
@@ -111,7 +129,7 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
         if (P5 && P5.MyralisScreen) {
           for (let k = 0; k < 13 && !image; k++) {
             const f = await P5.MyralisScreen.frame();
-            image = (f && f.image) || "";
+            image = await shrinkFrame((f && f.image) || "");
             if (!image) await sleep(300);
           }
         }
