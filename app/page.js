@@ -57,6 +57,29 @@ export default function Home() {
   }, []);
   const [callScreen, setCallScreen] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const probe = async () => {
+      try {
+        const res = await fetch(LOCAL_URL + "/status", { signal: AbortSignal.timeout(1500) });
+        const up = res.ok;
+        if (!alive) return;
+        if (up !== useLocal) {
+          setUseLocal(up);
+          localStorage.setItem("myralis_use_local", up ? "true" : "false");
+        }
+      } catch {
+        if (alive && useLocal) {
+          setUseLocal(false);
+          localStorage.setItem("myralis_use_local", "false");
+        }
+      }
+    };
+    probe();
+    const t = setInterval(probe, 3000);
+    return () => { alive = false; clearInterval(t); };
+  }, [useLocal]);
   const [pendingAction, setPendingAction] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState("system");
