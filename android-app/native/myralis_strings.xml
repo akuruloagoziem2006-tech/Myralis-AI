@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myralis_accessibility_description">Shows the Myralis floating bubble. Myralis does not read your screen with this setting.</string>
+</resources>

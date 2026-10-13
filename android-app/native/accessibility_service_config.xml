@@ -3,4 +3,4 @@
     android:accessibilityEventTypes="typeNone"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
-    android:description="Shows the Myralis floating bubble. Myralis does not read your screen with this setting." />
+    android:description="@string/myralis_accessibility_description" />
