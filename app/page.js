@@ -60,7 +60,7 @@ export default function Home() {
 
   useEffect(() => {
     let alive = true;
-    const probe = async () => {
+    const probe = async () => { return;
       try {
         const NP2 = window.Capacitor?.Plugins?.MyralisDevice;
         let up = false;
@@ -278,7 +278,7 @@ export default function Home() {
   }
 
   function toggleLocalMode() {
-    const newValue = !useLocal;
+    const newValue = false;
     setUseLocal(newValue);
     localStorage.setItem("myralis_use_local", newValue.toString());
     if (newValue) checkLocalServer();
