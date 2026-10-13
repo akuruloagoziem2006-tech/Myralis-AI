@@ -2,7 +2,7 @@
   try {
     var C = window.Capacitor;
     if (!C || !(C.isNativePlatform && C.isNativePlatform())) return;
-    var T = C.Plugins && C.Plugins.TextToSpeech;
+    var T = C.Plugins && C.Plugins.MyralisDevice;
     function clean(t) {
       return String(t || "")
         .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")

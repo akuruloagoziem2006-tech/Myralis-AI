@@ -99,7 +99,7 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
 
   function stopSpeaking() {
     const P = nativePlugins();
-    try { if (P && P.TextToSpeech) quiet(P.TextToSpeech.stop()); } catch {}
+    try { if (P && P.MyralisDevice) quiet(P.MyralisDevice.stop()); } catch {}
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
   }
 
@@ -113,8 +113,8 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
     if (!spoken || !alive.current) return;
     setPhase("speaking");
     const P = nativePlugins();
-    if (P && P.TextToSpeech) {
-      try { await P.TextToSpeech.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.85, volume: 1.0 }); } catch {}
+    if (P && P.MyralisDevice) {
+      try { await P.MyralisDevice.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.85, volume: 1.0 }); } catch {}
     } else {
       await speakWeb(spoken, synthRef);
     }

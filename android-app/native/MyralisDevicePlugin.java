@@ -22,6 +22,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 import java.util.Calendar;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import java.util.Locale;
 
 @CapacitorPlugin(
     name = "MyralisDevice",
@@ -329,5 +332,81 @@ public class MyralisDevicePlugin extends Plugin {
       r.put("up", up);
       call.resolve(r);
     }).start();
+  }
+
+  private TextToSpeech tts;
+  private boolean ttsReady;
+  private String ttsPending;
+  private float ttsPendingRate = 1.0f;
+  private float ttsPendingPitch = 1.0f;
+  private PluginCall speakCall;
+
+  @Override
+  public void load() {
+    tts = new TextToSpeech(getContext(), status -> {
+      ttsReady = status == TextToSpeech.SUCCESS;
+      if (ttsReady) {
+        tts.setLanguage(Locale.US);
+        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+          @Override public void onStart(String id) { }
+          @Override public void onDone(String id) { finishSpeak(); }
+          @Override public void onError(String id) { finishSpeak(); }
+        });
+        if (ttsPending != null) {
+          String t = ttsPending;
+          ttsPending = null;
+          doSpeak(t, ttsPendingRate, ttsPendingPitch);
+        }
+      }
+    });
+  }
+
+  private void finishSpeak() {
+    PluginCall c = speakCall;
+    speakCall = null;
+    if (c != null) c.resolve();
+  }
+
+  private void doSpeak(String text, float rate, float pitch) {
+    tts.setSpeechRate(rate);
+    tts.setPitch(pitch);
+    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "myralis");
+  }
+
+  @PluginMethod
+  public void speak(PluginCall call) {
+    String text = call.getString("text", "");
+    if (text == null || text.trim().isEmpty()) {
+      call.resolve();
+      return;
+    }
+    float rate = call.getFloat("rate", 1.0f);
+    float pitch = call.getFloat("pitch", 1.0f);
+    finishSpeak();
+    speakCall = call;
+    if (ttsReady) {
+      doSpeak(text, rate, pitch);
+    } else {
+      ttsPending = text;
+      ttsPendingRate = rate;
+      ttsPendingPitch = pitch;
+    }
+  }
+
+  @PluginMethod
+  public void stop(PluginCall call) {
+    ttsPending = null;
+    if (tts != null) tts.stop();
+    finishSpeak();
+    call.resolve();
+  }
+
+  @Override
+  protected void handleOnDestroy() {
+    if (tts != null) {
+      tts.stop();
+      tts.shutdown();
+    }
+    super.handleOnDestroy();
   }
 }
