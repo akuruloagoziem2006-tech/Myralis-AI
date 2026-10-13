@@ -35,9 +35,10 @@ jobs:
       - name: Add native plugins
         working-directory: android-app
         run: |
-          mkdir -p android/app/src/main/java/com/myralis/app android/app/src/main/res/xml
+          mkdir -p android/app/src/main/java/com/myralis/app android/app/src/main/res/xml android/app/src/main/res/values
           cp native/*.java android/app/src/main/java/com/myralis/app/
           cp native/accessibility_service_config.xml android/app/src/main/res/xml/
+          cp native/myralis_strings.xml android/app/src/main/res/values/myralis_strings.xml
           python3 - <<'PY'
           p = "android/app/src/main/java/com/myralis/app/MainActivity.java"
           s = open(p).read()
