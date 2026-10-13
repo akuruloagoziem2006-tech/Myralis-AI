@@ -35,8 +35,9 @@ jobs:
       - name: Add native plugins
         working-directory: android-app
         run: |
-          mkdir -p android/app/src/main/java/com/myralis/app
+          mkdir -p android/app/src/main/java/com/myralis/app android/app/src/main/res/xml
           cp native/*.java android/app/src/main/java/com/myralis/app/
+          cp native/accessibility_service_config.xml android/app/src/main/res/xml/
           python3 - <<'PY'
           p = "android/app/src/main/java/com/myralis/app/MainActivity.java"
           s = open(p).read()
@@ -61,6 +62,8 @@ jobs:
               services += '    <service android:name="com.myralis.app.ScreenService" android:foregroundServiceType="mediaProjection" android:exported="false" />\n'
           if "com.myralis.app.OverlayService" not in t:
               services += '    <service android:name="com.myralis.app.OverlayService" android:foregroundServiceType="specialUse" android:exported="false" />\n'
+          if "MyralisAccessibilityService" not in t:
+              services += '    <service android:name="com.myralis.app.MyralisAccessibilityService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config" /></service>\n'
           if services:
               t = t.replace("</application>", services + "    </application>", 1)
           if "AssistantActivity" not in t:
@@ -69,7 +72,7 @@ jobs:
           open(m, "w").write(t)
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
-          grep -n "uses-permission\|<service\|<activity" android/app/src/main/AndroidManifest.xml
+          grep -n "<service\|<activity\|BIND_ACCESSIBILITY" android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         working-directory: android-app/android
         run: |
