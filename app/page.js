@@ -62,8 +62,15 @@ export default function Home() {
     let alive = true;
     const probe = async () => {
       try {
-        const res = await fetch(LOCAL_URL + "/status", { signal: AbortSignal.timeout(1500) });
-        const up = res.ok;
+        const NP2 = window.Capacitor?.Plugins?.MyralisDevice;
+        let up = false;
+        if (NP2 && window.Capacitor?.isNativePlatform?.()) {
+          const st = await NP2.localStatus();
+          up = !!(st && st.up);
+        } else {
+          const res = await fetch(LOCAL_URL + "/status", { signal: AbortSignal.timeout(1500) });
+          up = res.ok;
+        }
         if (!alive) return;
         if (up !== useLocal) {
           setUseLocal(up);
@@ -457,6 +464,12 @@ export default function Home() {
   }
 
   async function sendToLocal(message) {
+    const NP = window.Capacitor?.Plugins?.MyralisDevice;
+    if (NP && window.Capacitor?.isNativePlatform?.()) {
+      const r = await NP.localChat({ message });
+      if (!r || !r.reply) throw new Error("Local server error");
+      return r.reply;
+    }
     const res = await fetch(`${LOCAL_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -283,4 +283,51 @@ public class MyralisDevicePlugin extends Plugin {
     r.put("message", "Opened " + bestLabel);
     call.resolve(r);
   }
+
+  @PluginMethod
+  public void localChat(PluginCall call) {
+    final String msg = call.getString("message", "");
+    new Thread(() -> {
+      try {
+        java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:8766/chat").openConnection();
+        c.setRequestMethod("POST");
+        c.setConnectTimeout(5000);
+        c.setReadTimeout(15000);
+        c.setDoOutput(true);
+        c.setRequestProperty("Content-Type", "application/json");
+        byte[] body = ("{\"message\":" + org.json.JSONObject.quote(msg) + "}").getBytes("UTF-8");
+        try (java.io.OutputStream os = c.getOutputStream()) { os.write(body); }
+        java.io.InputStream is = c.getResponseCode() < 400 ? c.getInputStream() : c.getErrorStream();
+        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        int n;
+        while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+        is.close();
+        org.json.JSONObject jo = new org.json.JSONObject(bo.toString("UTF-8"));
+        JSObject r = new JSObject();
+        r.put("reply", jo.optString("reply", ""));
+        call.resolve(r);
+      } catch (Exception e) {
+        call.reject("Local server unreachable: " + e.getMessage());
+      }
+    }).start();
+  }
+
+  @PluginMethod
+  public void localStatus(PluginCall call) {
+    new Thread(() -> {
+      boolean up = false;
+      try {
+        java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:8766/status").openConnection();
+        c.setConnectTimeout(1500);
+        c.setReadTimeout(1500);
+        up = c.getResponseCode() == 200;
+      } catch (Exception e) {
+        up = false;
+      }
+      JSObject r = new JSObject();
+      r.put("up", up);
+      call.resolve(r);
+    }).start();
+  }
 }
