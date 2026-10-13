@@ -157,7 +157,7 @@ Style:
         const body = withSearch ? { ...base, tools: [{ google_search: {} }] } : base;
         const r = await callGemini(model, body, budget);
         const { cand, text } = extract(r.data);
-        attempts.push(`${model}${withSearch ? "+search" : ""}:${r.status}${r.ok && !text ? ":empty" : ""}`);
+        attempts.push(`${model}${withSearch ? "+search" : ""}:${r.status}${r.ok && !text ? ":empty(" + (r.data?.candidates?.[0]?.finishReason || r.data?.promptFeedback?.blockReason || "no reason") + ")" : ""}`);
         if (r.ok && text) { result = { model, cand, text }; break; }
         if (!r.ok && ![400, 404, 429, 500, 503, 504].includes(r.status)) { fatal = r; break; }
       }
