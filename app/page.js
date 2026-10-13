@@ -101,6 +101,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!document.getElementById("native-voice")) { const nv = document.createElement("script"); nv.id = "native-voice"; nv.src = "/native-voice.js"; document.head.appendChild(nv); }
+    if (typeof window !== "undefined" && !localStorage.getItem("myralis_sw_reset_v2")) {
+      localStorage.setItem("myralis_sw_reset_v2", "1");
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())));
+      }
+      if ("caches" in window) {
+        caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))));
+      }
+    }
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").then((reg) => {
         // Check for updates on load and when app is opened again
