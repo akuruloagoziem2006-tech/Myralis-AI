@@ -1,5 +1,9 @@
 export const maxDuration = 30;
 
+const senseCache = new Map();
+const SENSE_TTL = 3 * 60 * 1000;
+
+
 const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
 
 function clip(s, n) {
@@ -45,6 +49,9 @@ ${convo}
 
 Write exactly 3 follow-up questions the user is most likely to ask next, phrased as the user would type them to the assistant. Make them different: one that goes deeper, one practical or actionable, one adjacent or surprising. Max 9 words each. Same language as the user. Return only a JSON array of 3 strings.`;
 
+    const cacheKey = mode + "|" + String(question || "").trim().toLowerCase().slice(0, 300) + "|" + convo.slice(-300);
+    const cached = senseCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < SENSE_TTL) return Response.json({ suggestions: cached.list, cached: true });
     const started = Date.now();
     for (const model of MODELS) {
       const budget = Math.min(6000, 18000 - (Date.now() - started));
@@ -71,7 +78,7 @@ Write exactly 3 follow-up questions the user is most likely to ask next, phrased
         const text = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
         if (res.ok && text) {
           const list = [...new Set(parseList(text))].map((s) => clip(s, 120)).slice(0, 3);
-          if (list.length >= 3 || (mode !== "typing" && list.length >= 2)) return Response.json({ suggestions: list });
+          if (list.length >= 3 || (mode !== "typing" && list.length >= 2)) senseCache.set(cacheKey, { list, at: Date.now() }); if (senseCache.size > 200) senseCache.clear(); return Response.json({ suggestions: list });
         }
       } catch {}
     }
