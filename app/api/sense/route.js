@@ -47,7 +47,7 @@ Write exactly 3 follow-up questions the user is most likely to ask next, phrased
 
     const started = Date.now();
     for (const model of MODELS) {
-      const budget = Math.min(9000, 25000 - (Date.now() - started));
+      const budget = Math.min(6000, 18000 - (Date.now() - started));
       if (budget < 3000) break;
       try {
         const res = await fetch(
@@ -59,7 +59,7 @@ Write exactly 3 follow-up questions the user is most likely to ask next, phrased
               contents: [{ role: "user", parts: [{ text: prompt }] }],
               generationConfig: {
                 temperature: 0.8,
-                maxOutputTokens: 1024,
+                maxOutputTokens: 256,
                 responseMimeType: "application/json"
               }
             }),
