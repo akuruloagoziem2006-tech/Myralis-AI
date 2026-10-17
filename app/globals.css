@@ -1,0 +1,17 @@
+:root { color-scheme: dark; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+::selection { background: rgba(139, 92, 246, 0.45); }
+* { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+@keyframes myFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes myBounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.35; } 40% { transform: translateY(-4px); opacity: 1; } }
+.my-fade { animation: myFadeUp 0.25s ease-out both; }
+.my-typing { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.my-typing i { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; display: inline-block; animation: myBounce 1.2s infinite ease-in-out; }
+.my-typing i:nth-child(2) { animation-delay: 0.15s; }
+.my-typing i:nth-child(3) { animation-delay: 0.3s; }
+.my-code-wrap { position: relative; margin: 10px 0; }
+.my-copy { position: absolute; top: 6px; right: 6px; font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid #3f3f46; background: #18181b; color: #d4d4d8; cursor: pointer; }
+.my-pre { background: #0b0b0f; border: 1px solid #27272a; border-radius: 12px; padding: 14px 14px 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 0; }
+.my-pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.my-code { background: #1f1f23; border-radius: 6px; padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.35); }

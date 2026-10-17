@@ -767,7 +767,7 @@ To use Local AI:
         )}
 
           {messages.map((msg, i) => (
-            <div key={i} style={styles.messageBlock}>
+            <div key={i} className="my-fade" style={styles.messageBlock}>
               <div style={{
                 ...styles.bubble,
                 ...(msg.role === "user" ? styles.userBubble : styles.assistantBubble),
@@ -795,6 +795,7 @@ To use Local AI:
                         h1: ({node, ...props}) => <h1 style={{ margin: "18px 0 10px", fontSize: 22 }} {...props} />,
                         h2: ({node, ...props}) => <h2 style={{ margin: "16px 0 8px", fontSize: 18 }} {...props} />,
                         h3: ({node, ...props}) => <h3 style={{ margin: "14px 0 8px", fontSize: 16 }} {...props} />,
+                        code: ({node, inline, className, children, ...props}) => inline ? (<code className="my-code" {...props}>{children}</code>) : (<div className="my-code-wrap"><button className="my-copy" onClick={() => navigator.clipboard?.writeText(String(children).replace(/\n$/, ""))}>Copy</button><pre className="my-pre"><code {...props}>{children}</code></pre></div>),
                         hr: ({node, ...props}) => <hr style={{ margin: "16px 0", border: "none", borderTop: "1px solid rgba(127,127,127,0.25)" }} {...props} />
                       }}
                     >{msg.content}</ReactMarkdown>
@@ -832,7 +833,7 @@ To use Local AI:
           
           {loading && (
             <div style={{ ...styles.bubble, ...styles.assistantBubble, opacity: 0.9 }}>
-              Thinking… {thinkingSeconds}s
+              <span className="my-typing" aria-label="Thinking"><i></i><i></i><i></i></span> <small>{thinkingSeconds}s</small>
             </div>
           )}
           <div className="myralis-bottom-spacer" style={{ height: 220, flexShrink: 0 }} />

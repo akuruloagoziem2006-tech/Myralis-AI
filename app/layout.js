@@ -1,3 +1,4 @@
+import "./globals.css";
 export const metadata = {
   title: "Myralis AI",
   description: "Your helpful AI model for learning, writing, planning, and everyday questions.",
