@@ -442,4 +442,22 @@ public class MyralisDevicePlugin extends Plugin {
     r.put("voices", out);
     call.resolve(r);
   }
+
+  @PluginMethod
+  public void testVoice(PluginCall call) {
+    String name = call.getString("voice", "");
+    if (!ttsReady || tts == null) {
+      call.reject("Speech engine is not ready yet");
+      return;
+    }
+    applyVoice(name);
+    android.speech.tts.Voice cur = tts.getVoice();
+    String curName = cur == null ? "none" : cur.getName();
+    tts.speak("Hello, I am Myralis.", TextToSpeech.QUEUE_FLUSH, null, "test");
+    JSObject r = new JSObject();
+    r.put("requested", name);
+    r.put("current", curName);
+    r.put("matched", !name.isEmpty() && curName.equals(name));
+    call.resolve(r);
+  }
 }

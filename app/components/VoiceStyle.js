@@ -26,6 +26,26 @@ export default function VoiceStyle({ c }) {
     } catch {}
   }
 
+  async function test() {
+    const P = window.Capacitor?.Plugins?.MyralisDevice;
+    if (!P || !window.Capacitor?.isNativePlatform?.()) {
+      alert("Voice test needs the Myralis Android app.");
+      return;
+    }
+    try {
+      const r = await P.testVoice({ voice: prefs.voice || "" });
+      if (!prefs.voice) {
+        alert("Default voice in use: " + r.current);
+      } else if (r.matched) {
+        alert("Switched to " + r.current + ".");
+      } else {
+        alert("The phone used " + r.current + " instead of " + prefs.voice + ". That voice isn't usable on this phone yet. Download its voice data and try again.");
+      }
+    } catch (e) {
+      alert("Test failed: " + ((e && e.message) || e));
+    }
+  }
+
   const btn = (active) => ({
     flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 13,
     border: "1px solid " + (active ? accent : "#3f3f46"),
@@ -52,6 +72,9 @@ export default function VoiceStyle({ c }) {
             <option value="">Default</option>
             {voices.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
+          <button onClick={test} style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10, border: "1px solid #3f3f46", background: "transparent", color: text }}>
+            Test this voice
+          </button>
         </>
       )}
       <div style={{ fontSize: 12, color: muted, marginTop: 8 }}>Applies to auto-speak, the 🔊 button, and calls.</div>
