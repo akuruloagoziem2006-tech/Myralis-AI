@@ -2,6 +2,9 @@ import { extractUrls, fetchPageText } from "../../lib/webfetch";
 
 export const maxDuration = 60;
 
+const cooldown = new Map();
+const COOL_MS = 10 * 60 * 1000;
+
 const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
@@ -125,12 +128,14 @@ Style:
     let fatal = null;
 
     for (const model of MODELS) {
+      if ((cooldown.get(model) || 0) > Date.now()) { attempts.push(model + ":cooldown"); continue; }
       const plans = useSearch ? [true, false] : [false];
       for (const withSearch of plans) {
         const budget = Math.min(withSearch ? 18000 : 14000, left());
         if (budget < 3000) continue;
         const body = withSearch ? { ...base, tools: [{ google_search: {} }] } : base;
         const r = await callGemini(model, body, budget);
+        if (r.status === 429) cooldown.set(model, Date.now() + COOL_MS);
         const cand = r.data?.candidates?.[0];
         const text = (cand?.content?.parts || []).map((p) => p.text || "").join("").trim();
         const reason = cand?.finishReason || r.data?.promptFeedback?.blockReason || "";
