@@ -19,7 +19,7 @@ async function withWebPages(list) {
 
 export const maxDuration = 60;
 
-const MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"];
+const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
 
 export async function POST(request) {
@@ -81,7 +81,7 @@ What you know about the user: ${String(memory || "nothing yet").slice(0, 1500)}`
             .replace(/[*#`]/g, "")
             .replace(/\s+/g, " ")
             .trim();
-          return Response.json({ reply, model: MODELS[i] });
+          return Response.json({ reply, model: MODELS[i], attempts: (typeof attempts !== "undefined" ? attempts : []).concat([MODELS[i] + ":200"]) });
         }
       } catch {
         attempts.push(MODELS[i] + ":timeout");
