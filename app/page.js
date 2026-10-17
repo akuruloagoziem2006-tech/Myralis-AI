@@ -498,6 +498,14 @@ export default function Home() {
     return data.reply;
   }
 
+  function recordStatus(kind, value, model) {
+    try {
+      localStorage.setItem("myralis_last_status", JSON.stringify({
+        kind, value: String(value || "").slice(0, 300), model: model || "", at: Date.now()
+      }));
+    } catch {}
+  }
+
   async function sendToGemini(updatedMessages) {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -512,10 +520,12 @@ export default function Home() {
       throw new Error("Bad response from /api/chat (HTTP " + res.status + ")");
     }
     if (!res.ok || data.error) {
+      recordStatus("error", data.error || ("HTTP " + res.status));
       throw new Error(data.error || ("HTTP " + res.status));
     }
     if (!data.reply) throw new Error("Empty reply from model");
     if (data.updatedMemory) saveMemory(data.updatedMemory);
+    recordStatus("ok", "", data.model);
     return data.reply;
   }
 
