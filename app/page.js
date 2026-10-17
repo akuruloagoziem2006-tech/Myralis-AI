@@ -215,7 +215,7 @@ export default function Home() {
   }, [messages]);
 
   useEffect(() => {
-    chatEnd.current?.scrollIntoView({ behavior: "smooth" });
+    chatEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, loading]);
 
   useEffect(() => {
@@ -866,7 +866,7 @@ To use Local AI:
               <span className="my-typing" aria-label="Thinking"><i></i><i></i><i></i></span> <small>{thinkingSeconds}s</small>
             </div>
           )}
-          <div className="myralis-bottom-spacer" style={{ height: 220, flexShrink: 0 }} />
+          <div className="myralis-bottom-spacer" style={{ height: 96, flexShrink: 0 }} />
           <div ref={chatEnd} />
         </div>
       </main>
