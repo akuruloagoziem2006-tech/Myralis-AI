@@ -1,3 +1,4 @@
+import KeysStatus from "./KeysStatus";
 "use client";
 
 export default function SettingsPanel({
@@ -184,6 +185,7 @@ export default function SettingsPanel({
 
         <Group label="Data & information">
           <Row icon="💬" title="New chat" onClick={onNewChat} />
+          <KeysStatus c={c} />
           <Row
             icon="🗑"
             title="Clear all chats"
