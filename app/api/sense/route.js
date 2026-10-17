@@ -59,7 +59,7 @@ Write exactly 3 follow-up questions the user is most likely to ask next, phrased
               contents: [{ role: "user", parts: [{ text: prompt }] }],
               generationConfig: {
                 temperature: 0.8,
-                maxOutputTokens: 256,
+                maxOutputTokens: 1024,
                 responseMimeType: "application/json"
               }
             }),
@@ -71,7 +71,7 @@ Write exactly 3 follow-up questions the user is most likely to ask next, phrased
         const text = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
         if (res.ok && text) {
           const list = [...new Set(parseList(text))].map((s) => clip(s, 120)).slice(0, 3);
-          if (list.length) return Response.json({ suggestions: list });
+          if (list.length >= 3 || (mode !== "typing" && list.length >= 2)) return Response.json({ suggestions: list });
         }
       } catch {}
     }
