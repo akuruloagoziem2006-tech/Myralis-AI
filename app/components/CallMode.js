@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getVoicePrefs } from "../lib/voiceStyle";
 
 function nativePlugins() {
   try {
@@ -114,7 +115,7 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
     setPhase("speaking");
     const P = nativePlugins();
     if (P && P.MyralisDevice) {
-      try { await P.MyralisDevice.speak({ text: spoken, lang: "en-US", rate: 1.0, pitch: 0.85, volume: 1.0 }); } catch {}
+      try { await P.MyralisDevice.speak({ text: spoken, lang: "en-US", volume: 1.0, rate: getVoicePrefs().rate, pitch: getVoicePrefs().pitch, voice: getVoicePrefs().voice }); } catch {}
     } else {
       await speakWeb(spoken, synthRef);
     }

@@ -13,6 +13,7 @@ import android.provider.AlarmClock;
 import android.provider.CalendarContract;
 import android.provider.ContactsContract;
 import com.getcapacitor.JSArray;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -336,6 +337,7 @@ public class MyralisDevicePlugin extends Plugin {
 
   private TextToSpeech tts;
   private boolean ttsReady;
+  private String ttsVoiceName = "";
   private String ttsPending;
   private float ttsPendingRate = 1.0f;
   private float ttsPendingPitch = 1.0f;
@@ -370,6 +372,7 @@ public class MyralisDevicePlugin extends Plugin {
   private void doSpeak(String text, float rate, float pitch) {
     tts.setSpeechRate(rate);
     tts.setPitch(pitch);
+    applyVoice(ttsVoiceName);
     tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "myralis");
   }
 
@@ -382,6 +385,7 @@ public class MyralisDevicePlugin extends Plugin {
     }
     float rate = call.getFloat("rate", 1.0f);
     float pitch = call.getFloat("pitch", 1.0f);
+    ttsVoiceName = call.getString("voice", "");
     finishSpeak();
     speakCall = call;
     if (ttsReady) {
@@ -408,5 +412,25 @@ public class MyralisDevicePlugin extends Plugin {
       tts.shutdown();
     }
     super.handleOnDestroy();
+  }
+
+  private void applyVoice(String name) {
+    if (tts == null || name == null || name.isEmpty()) return;
+    for (android.speech.tts.Voice v : tts.getVoices()) {
+      if (v.getName().equals(name)) { tts.setVoice(v); return; }
+    }
+  }
+
+  @PluginMethod
+  public void listVoices(PluginCall call) {
+    JSArray out = new JSArray();
+    if (ttsReady && tts != null) {
+      for (android.speech.tts.Voice v : tts.getVoices()) {
+        if (v.getLocale() != null && "en".equals(v.getLocale().getLanguage())) out.put(v.getName());
+      }
+    }
+    JSObject r = new JSObject();
+    r.put("voices", out);
+    call.resolve(r);
   }
 }
