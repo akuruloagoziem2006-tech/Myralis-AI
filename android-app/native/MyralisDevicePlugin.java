@@ -414,11 +414,20 @@ public class MyralisDevicePlugin extends Plugin {
     super.handleOnDestroy();
   }
 
+  private boolean usable(android.speech.tts.Voice v) {
+    java.util.Set<String> f = v.getFeatures();
+    return f == null || !f.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED);
+  }
+
   private void applyVoice(String name) {
     if (tts == null || name == null || name.isEmpty()) return;
     for (android.speech.tts.Voice v : tts.getVoices()) {
-      if (v.getName().equals(name)) { tts.setVoice(v); return; }
+      if (v.getName().equals(name) && usable(v)) {
+        if (tts.setVoice(v) != TextToSpeech.SUCCESS) tts.setLanguage(Locale.US);
+        return;
+      }
     }
+    tts.setLanguage(Locale.US);
   }
 
   @PluginMethod
@@ -426,7 +435,7 @@ public class MyralisDevicePlugin extends Plugin {
     JSArray out = new JSArray();
     if (ttsReady && tts != null) {
       for (android.speech.tts.Voice v : tts.getVoices()) {
-        if (v.getLocale() != null && "en".equals(v.getLocale().getLanguage())) out.put(v.getName());
+        if (v.getLocale() != null && "en".equals(v.getLocale().getLanguage()) && usable(v)) out.put(v.getName());
       }
     }
     JSObject r = new JSObject();
