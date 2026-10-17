@@ -699,7 +699,7 @@ To use Local AI:
                 {(() => {
                   const q = (chatSearch || "").trim().toLowerCase();
                   const list = (pastChats || []).filter((c) =>
-                    !q || String(c.title || "").toLowerCase().includes(q)
+                    !q || String(c.title || "").toLowerCase().includes(q) || (c.messages || []).some((m) => String(m.content || "").toLowerCase().includes(q))
                   );
                   if (!list.length) {
                     return (
@@ -717,6 +717,10 @@ To use Local AI:
                         <div style={styles.menuChatTitle}>
                           {(chat.pinned ? "📌 " : "") + (chat.title || "Chat")}
                         </div>
+                        {q && (() => {
+                          const hit = (chat.messages || []).find((m) => String(m.content || "").toLowerCase().includes(q));
+                          return hit ? <div style={{ fontSize: 12, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(hit.content).slice(0, 90)}</div> : null;
+                        })()}
                       </button>
                       <div style={styles.menuChatActions}>
                         <button onClick={() => togglePin(chat.id)} style={styles.menuTiny} title="Pin">📌</button>
@@ -726,6 +730,24 @@ To use Local AI:
                     </div>
                   ));
                 })()}
+              </div>
+              <div data-memory-panel="1">
+                <div style={styles.menuSectionLabel}>Memory</div>
+                <div style={styles.menuCard}>
+                  <div style={{ padding: "12px 14px" }}>
+                    <textarea
+                      value={memoryDraft !== "" ? memoryDraft : memory}
+                      onChange={(e) => setMemoryDraft(e.target.value)}
+                      placeholder="Nothing saved yet. Tell Myralis things to remember."
+                      rows={3}
+                      style={{ width: "100%", boxSizing: "border-box", background: "transparent", color: "#f4f4f5", border: "none", outline: "none", resize: "none", fontSize: 14, fontFamily: "inherit" }}
+                    />
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button onClick={() => { saveMemory(memoryDraft !== "" ? memoryDraft : memory); setMemoryDraft(""); }} style={{ flex: 1, padding: 9, borderRadius: 10, border: "none", background: "#f4f4f5", color: "#09090b", fontWeight: 600 }}>Save</button>
+                      <button onClick={() => { setMemoryDraft(""); saveMemory(""); }} style={{ flex: 1, padding: 9, borderRadius: 10, border: "1px solid #3f3f46", background: "transparent", color: "#f4f4f5" }}>Clear</button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div style={styles.menuBottomBar}>
                 <div style={styles.menuSearchWrap}>
