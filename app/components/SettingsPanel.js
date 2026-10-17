@@ -1,6 +1,7 @@
 "use client";
 
 import KeysStatus from "./KeysStatus";
+import VoiceStyle from "./VoiceStyle";
 
 export default function SettingsPanel({
   open,
@@ -186,6 +187,7 @@ export default function SettingsPanel({
 
         <Group label="Data & information">
           <Row icon="💬" title="New chat" onClick={onNewChat} />
+          <VoiceStyle c={c} />
           <KeysStatus c={c} />
           <Row
             icon="🗑"
