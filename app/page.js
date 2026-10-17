@@ -59,6 +59,14 @@ export default function Home() {
   const [showPlus, setShowPlus] = useState(false);
 
   useEffect(() => {
+    const el = document.querySelector("textarea[data-composer]");
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    }
+  }, [input]);
+
+  useEffect(() => {
     let alive = true;
     const probe = async () => { return;
       try {
@@ -890,13 +898,15 @@ To use Local AI:
           <button onClick={() => { setCallScreen(false); setShowCall(true); }} style={styles.toolBtn} title="Call Myralis">📞</button>
           <button onClick={() => setShowPlus((v) => !v)} style={styles.toolBtn} title="More">＋</button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
-          <input
-            style={{ ...styles.input, color: c.text }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="Message Myralis..."
-          />
+          <textarea
+              data-composer="1"
+              rows={1}
+              enterKeyHint="enter"
+              style={{ ...styles.input, color: c.text, resize: "none", overflowY: "auto", maxHeight: 160, lineHeight: 1.4, fontFamily: "inherit", padding: "10px 4px" }}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Message Myralis..."
+            />
           <button
             onClick={sendMessage}
             disabled={loading || (!input.trim() && !image)}
