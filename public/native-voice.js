@@ -3,19 +3,14 @@
     var C = window.Capacitor;
     if (!C || !(C.isNativePlatform && C.isNativePlatform())) return;
     var T = C.Plugins && C.Plugins.MyralisDevice;
-    var STYLES = {
-      warm: [0.95, 0.95],
-      bright: [1.2, 1.35],
-      deep: [0.85, 0.6],
-      calm: [0.8, 1.05]
-    };
+    var STYLES = { warm: [1.0, 1.0] };
     function prefs() {
       try {
         var v = JSON.parse(localStorage.getItem("myralis_voice") || "{}");
-        var p = STYLES[v.style] || STYLES.warm;
+        var p = STYLES.warm;
         return { rate: p[0], pitch: p[1], voice: v.name || "" };
       } catch (e) {
-        return { rate: 0.95, pitch: 0.95, voice: "" };
+        return { rate: 1.0, pitch: 1.0, voice: "" };
       }
     }
     function clean(t) {
