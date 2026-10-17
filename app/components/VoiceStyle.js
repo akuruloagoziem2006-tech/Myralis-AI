@@ -32,6 +32,15 @@ export default function VoiceStyle({ c }) {
       alert("Voice test needs the Myralis Android app.");
       return;
     }
+    if (typeof P.testVoice !== "function") {
+      try {
+        await P.speak({ text: "Hello, I am Myralis. This is how I sound with this voice.", lang: "en-US", volume: 1.0, rate: getVoicePrefs().rate, pitch: getVoicePrefs().pitch, voice: prefs.voice || "" });
+        alert(prefs.voice ? "Speaking a sample with " + prefs.voice + ". If it sounds the same as Default, this phone is not switching voices." : "Speaking a sample with the Default voice.");
+      } catch (e) {
+        alert("Could not speak the sample: " + ((e && e.message) || e));
+      }
+      return;
+    }
     try {
       const r = await P.testVoice({ voice: prefs.voice || "" });
       if (!prefs.voice) {
