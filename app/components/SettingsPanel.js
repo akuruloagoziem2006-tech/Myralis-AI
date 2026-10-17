@@ -1,5 +1,6 @@
-import KeysStatus from "./KeysStatus";
 "use client";
+
+import KeysStatus from "./KeysStatus";
 
 export default function SettingsPanel({
   open,
