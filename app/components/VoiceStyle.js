@@ -35,7 +35,7 @@ export default function VoiceStyle({ c }) {
     if (typeof P.testVoice !== "function") {
       try {
         await P.speak({ text: "Hello, I am Myralis. This is how I sound with this voice.", lang: "en-US", volume: 1.0, rate: getVoicePrefs().rate, pitch: getVoicePrefs().pitch, voice: prefs.voice || "" });
-        alert(prefs.voice ? "Speaking a sample with " + prefs.voice + ". If it sounds the same as Default, this phone is not switching voices." : "Speaking a sample with the Default voice.");
+        const g = getVoicePrefs(); alert("Sent to phone: style " + g.style + ", speed " + g.rate + ", pitch " + g.pitch + ", voice " + (prefs.voice || "Default") + ". Listen for a change in speed or pitch.");
       } catch (e) {
         alert("Could not speak the sample: " + ((e && e.message) || e));
       }
