@@ -10,7 +10,7 @@ const apiFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/$
 const NEEDS_SEARCH = /\b(news|latest|today|tonight|current|currently|recent|recently|right now|price|stock|score|weather|released?|202[4-9])\b/i;
 
 function buildContents(messages) {
-  const recent = (messages || []).slice(-12);
+  const recent = (messages || []).slice(-20);
   const contents = [];
   recent.forEach((msg, i) => {
     const parts = [];
@@ -87,6 +87,12 @@ How to answer:
 - Match depth to the question: short for simple asks, deeper for complex ones
 - Answer the actual question directly
 - Use the user's memory to personalize only when it helps
+
+Personal context:
+- Treat memory as a short list of durable facts about the user (name, goals, preferences, ongoing projects)
+- Refer to these facts naturally, without announcing that you remember them
+- If a request is vague and the answer would depend on a detail you don't have, ask one focused clarifying question instead of guessing
+- Never store sensitive details unless the user clearly asked you to remember them
 - Treat conversations as private
 
 Current memory about the user:
@@ -96,7 +102,7 @@ Memory updates:
 - If the user shares important lasting facts (name, preferences, goals), update memory
 - When updating memory, end your reply with:
 [[MEMORY]]concise updated memory[[/MEMORY]]
-- Keep memory short and useful
+- Keep memory short and useful: merge new facts into the existing list, drop anything outdated, and keep it under about 800 characters
 
 Vision requests:
 - If the user message is about a camera frame or detected objects, describe what is visible clearly and usefully

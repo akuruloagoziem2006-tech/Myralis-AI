@@ -511,7 +511,7 @@ export default function Home() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: updatedMessages.slice(-12).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }),
+        messages: updatedMessages.slice(-20).map((m, i, a) => i === a.length - 1 ? m : { ...m, image: null }),
         memory
       })
     });
