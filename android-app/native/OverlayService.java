@@ -303,7 +303,7 @@ public class OverlayService extends Service {
     @Override public void onRmsChanged(float f) { }
     @Override public void onBufferReceived(byte[] b) { }
     @Override public void onEndOfSpeech() { if (statusView != null) statusView.setText("Thinking..."); }
-    @Override public void onError(int e) { if (statusView != null) statusView.setText("Didn't catch that. Tap Talk to try again."); }
+    @Override public void onError(int e) { if (statusView != null) statusView.setText(errorText(e)); }
     @Override public void onResults(Bundle r) {
       ArrayList<String> m = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
       if (m != null && !m.isEmpty()) send(m.get(0));
@@ -325,6 +325,9 @@ public class OverlayService extends Service {
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
     statusView.setText("Listening...");
+    i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
+    try { recognizer.cancel(); } catch (Exception ignored) { }
     recognizer.startListening(i);
   }
 
@@ -514,6 +517,26 @@ public class OverlayService extends Service {
         new String[]{id}, null)) {
       if (ph == null || !ph.moveToFirst()) return null;
       return new String[]{display, ph.getString(0)};
+    }
+  }
+
+  private String errorText(int e) {
+    switch (e) {
+      case SpeechRecognizer.ERROR_NO_MATCH:
+        return "I didn't hear a clear question. Tap the orb and try again.";
+      case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+        return "No speech was heard. Tap the orb and speak.";
+      case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+        return "Voice is busy. Tap the orb again in a moment.";
+      case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+        return "Allow microphone for Myralis in Settings, Apps, Myralis, Permissions.";
+      case SpeechRecognizer.ERROR_NETWORK:
+      case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+        return "Speech recognition needs internet right now. Check the connection.";
+      case SpeechRecognizer.ERROR_AUDIO:
+        return "The microphone could not record. Tap the orb to try again.";
+      default:
+        return "Voice error " + e + ". Tap the orb to try again.";
     }
   }
 
