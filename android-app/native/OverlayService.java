@@ -209,14 +209,17 @@ public class OverlayService extends Service {
     panel.setOrientation(LinearLayout.VERTICAL);
     panel.setPadding(dp(16), dp(14), dp(16), dp(14));
     GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF18181B);
-    bg.setCornerRadii(new float[]{dp(22), dp(22), dp(22), dp(22), 0, 0, 0, 0});
+    bg.setColor(0xD9101014);
+    bg.setCornerRadii(new float[]{dp(28), dp(28), dp(28), dp(28), 0, 0, 0, 0});
+    bg.setStroke(dp(1), 0x33FFFFFF);
     panel.setBackground(bg);
+    panel.setTag("glassPanel");
 
     TextView title = new TextView(this);
     title.setText("✧  Myralis  · cmd v2");
     title.setTextColor(0xFFFFFFFF);
     title.setTextSize(17);
+    title.setAlpha(0.95f);
     title.setTypeface(null, android.graphics.Typeface.BOLD);
     panel.addView(title);
 
