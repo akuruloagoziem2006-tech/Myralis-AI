@@ -345,6 +345,7 @@ public class MyralisDevicePlugin extends Plugin {
 
   @Override
   public void load() {
+    fullScreen();
     tts = new TextToSpeech(getContext(), status -> {
       ttsReady = status == TextToSpeech.SUCCESS;
       if (ttsReady) {
@@ -459,5 +460,29 @@ public class MyralisDevicePlugin extends Plugin {
     r.put("current", curName);
     r.put("matched", !name.isEmpty() && curName.equals(name));
     call.resolve(r);
+  }
+
+  private void fullScreen() {
+    try {
+      getActivity().runOnUiThread(() -> {
+        android.view.Window w = getActivity().getWindow();
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+          w.setDecorFitsSystemWindows(false);
+          android.view.WindowInsetsController ic = w.getInsetsController();
+          if (ic != null) {
+            ic.hide(android.view.WindowInsets.Type.statusBars() | android.view.WindowInsets.Type.navigationBars());
+            ic.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+          }
+        } else {
+          w.getDecorView().setSystemUiVisibility(
+              android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+              | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+              | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+              | android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+              | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+              | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        }
+      });
+    } catch (Exception e) { }
   }
 }
