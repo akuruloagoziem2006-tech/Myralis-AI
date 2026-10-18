@@ -100,7 +100,7 @@ const styles = {
     position: "fixed",
     left: 0,
     right: 0,
-    bottom: "calc(env(safe-area-inset-bottom, 0px) + 230px)",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 136px)",
     zIndex: 30,
     pointerEvents: "none"
   },
