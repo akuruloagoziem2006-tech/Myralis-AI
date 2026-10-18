@@ -260,7 +260,7 @@ public class OverlayService extends Service {
     rl.topMargin = dp(10);
     Button orb = new Button(this);
     orb.setText("🎙");
-    orb.setTextSize(26);
+    orb.setTextSize(18);
     orb.setTextColor(0xFFFFFFFF);
     orb.setAllCaps(false);
     GradientDrawable od = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF7C3AED, 0xFF06B6D4});
@@ -269,10 +269,10 @@ public class OverlayService extends Service {
     orb.setElevation(dp(16));
     orb.setContentDescription("tapOrb");
     orb.setOnClickListener(v -> startListening());
-    LinearLayout.LayoutParams orbLp = new LinearLayout.LayoutParams(dp(76), dp(76));
+    LinearLayout.LayoutParams orbLp = new LinearLayout.LayoutParams(dp(52), dp(52));
     orbLp.gravity = Gravity.CENTER_HORIZONTAL;
-    orbLp.topMargin = dp(10);
-    orbLp.bottomMargin = dp(10);
+    orbLp.topMargin = dp(6);
+    orbLp.bottomMargin = dp(4);
     panel.addView(orb, orbLp);
     panel.addView(row, rl);
 
