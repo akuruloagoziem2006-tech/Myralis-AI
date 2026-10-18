@@ -677,7 +677,7 @@ To use Local AI:
 
     <div style={{ ...styles.page, background: c.bg, color: c.text }}>
       {/* Header */}
-      <header style={{ ...styles.header, background: c.panel, borderBottom: `1px solid ${c.border}` }}>
+      <header style={{ ...styles.header, background: c.bg, borderBottom: "none", boxShadow: "none", position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(8px)" }}>
         <button onClick={() => setShowDashboard(true)} style={styles.topIconBtn} title="Menu">☰</button>
         <button onClick={newChat} style={styles.topIconBtn} title="New chat">✎</button>
       </header>
@@ -1578,7 +1578,7 @@ const styles = {
   modeSwitch: { display: "flex", gap: 2, background: "#18181b", borderRadius: 999, padding: 3 },
   modeSwitchBtn: { border: "none", background: "transparent", color: "#a1a1aa", borderRadius: 999, padding: "7px 16px", fontSize: 14, fontWeight: 600 },
   modeSwitchOn: { background: "#f4f4f5", color: "#09090b" },
-  heroWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "36px 0 20px" },
+  heroWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "48px 0 24px" },
   heroLogo: { fontSize: 64, lineHeight: 1, background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
   heroTitle: { fontSize: 24, fontWeight: 700, letterSpacing: 0.5 },
 };
