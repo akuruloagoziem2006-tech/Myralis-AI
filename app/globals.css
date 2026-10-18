@@ -15,3 +15,6 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -w
 .my-pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .my-code { background: #1f1f23; border-radius: 6px; padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
 input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.35); }
+
+textarea[data-composer]:focus, textarea[data-composer] { box-shadow: none !important; outline: none !important; border: none !important; }
+footer { transition: none !important; bottom: var(--kb, 0px) !important; }

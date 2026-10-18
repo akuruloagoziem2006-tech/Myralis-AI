@@ -59,6 +59,22 @@ export default function Home() {
   const [showPlus, setShowPlus] = useState(false);
 
   useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty("--kb", kb + "px");
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  useEffect(() => {
     const el = document.querySelector("textarea[data-composer]");
     if (el) {
       el.style.height = "auto";
