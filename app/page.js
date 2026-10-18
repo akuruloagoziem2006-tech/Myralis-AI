@@ -912,37 +912,38 @@ To use Local AI:
             <button onClick={() => { setShowPlus(false); setCallScreen(true); setShowCall(true); }} style={styles.plusRow}>🖥  Live screen</button>
           </div>
         )}
-        <div style={{ ...styles.inputWrapper, background: c.inputBg, borderColor: c.border, color: c.text }}>
-          <button
-            onClick={speaking ? stopSpeaking : startListening}
-            style={{
-              ...styles.toolBtn,
-              background: listening || speaking ? "rgba(96,165,250,0.2)" : "transparent",
-              color: listening || speaking ? "#60a5fa" : "#71717a"
-            }}
-            title={speaking ? "Stop speaking" : "Voice input"}
-          >
-            {speaking ? "⏹" : listening ? "●" : "🎙"}
-          </button>
-          <button onClick={() => { setCallScreen(false); setShowCall(true); }} style={styles.toolBtn} title="Call Myralis">📞</button>
-          <button onClick={() => setShowPlus((v) => !v)} style={styles.toolBtn} title="More">＋</button>
+        <div style={{ background: c.inputBg, border: "1px solid " + c.border, borderRadius: 26, padding: "10px 12px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.12)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box", color: c.text }}>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
           <textarea
-              data-composer="1"
-              rows={1}
-              enterKeyHint="enter"
-              style={{ ...styles.input, color: c.text, resize: "none", overflowY: "auto", maxHeight: 160, lineHeight: 1.4, fontFamily: "inherit", padding: "10px 4px" }}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Message Myralis..."
-            />
-          <button
-            onClick={sendMessage}
-            disabled={loading || (!input.trim() && !image)}
-            style={{ ...styles.sendBtn, background: c.accent, opacity: loading || (!input.trim() && !image) ? 0.4 : 1 }}
-          >
-            ↑
-          </button>
+            data-composer="1"
+            rows={1}
+            enterKeyHint="enter"
+            style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", color: c.text, fontSize: 16, lineHeight: 1.4, fontFamily: "inherit", padding: "6px 6px 8px", maxHeight: 160, overflowY: "auto", boxSizing: "border-box", display: "block" }}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Myralis..."
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setShowPlus((v) => !v)} title="More" style={{ width: 36, height: 36, borderRadius: 999, border: "1px solid " + c.border, background: "transparent", color: c.text, fontSize: 20, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>＋</button>
+            <div style={{ padding: "7px 14px", borderRadius: 999, border: "1px solid " + c.border, fontSize: 13, color: c.text, opacity: 0.8, whiteSpace: "nowrap" }}>{isOnline && !useLocal ? "Gemini" : "Local"}</div>
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={speaking ? stopSpeaking : startListening}
+              title={speaking ? "Stop speaking" : "Voice input"}
+              style={{ width: 36, height: 36, borderRadius: 999, border: "none", background: listening || speaking ? "rgba(96,165,250,0.2)" : "transparent", color: listening || speaking ? "#60a5fa" : c.text, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              {speaking ? "⏹" : listening ? "●" : "🎙"}
+            </button>
+            <button onClick={() => { setCallScreen(false); setShowCall(true); }} title="Call Myralis" style={{ width: 36, height: 36, borderRadius: 999, border: "none", background: "transparent", color: c.text, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>📞</button>
+            <button
+              onClick={sendMessage}
+              disabled={loading || (!input.trim() && !image)}
+              title="Send"
+              style={{ width: 40, height: 40, borderRadius: 999, border: "none", background: "#111113", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: loading || (!input.trim() && !image) ? 0.4 : 1 }}
+            >
+              ↑
+            </button>
+          </div>
         </div>
       </footer>
     <SpiderSense messages={messages} input={input} loading={loading} enabled={!useLocal && isOnline && senseOn} onSend={(t) => sendMessageWithText(t)} onFill={(t) => setInput(t)} />
