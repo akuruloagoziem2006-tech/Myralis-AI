@@ -18,3 +18,14 @@ input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(139, 92,
 
 textarea[data-composer]:focus, textarea[data-composer] { box-shadow: none !important; outline: none !important; border: none !important; }
 footer { transition: none !important; bottom: var(--kb, 0px) !important; }
+
+.my-pre, .my-pre code, .my-pre * { color: #e4e4e7 !important; -webkit-text-fill-color: #e4e4e7 !important; }
+.my-pre { background: #0b0b0f !important; border: 1px solid #27272a !important; }
+.my-pre code { background: transparent !important; text-shadow: none !important; }
+.my-pre .hljs-keyword, .my-pre .token.keyword { color: #c4b5fd !important; }
+.my-pre .hljs-string, .my-pre .token.string { color: #86efac !important; }
+.my-pre .hljs-comment, .my-pre .token.comment { color: #71717a !important; }
+.my-pre .hljs-number, .my-pre .token.number { color: #fdba74 !important; }
+.my-copy { color: #e4e4e7 !important; background: #18181b !important; border: 1px solid #3f3f46 !important; }
+.my-code { color: #7c2d12 !important; background: #f4f4f5 !important; }
+@media (prefers-color-scheme: dark) { .my-code { color: #fde68a !important; background: #27272a !important; } }
