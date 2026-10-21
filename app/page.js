@@ -45,6 +45,8 @@ export default function Home() {
         if (!P || !window.Capacitor?.isNativePlatform?.()) return;
         const r = await P.takePending();
         if (r && r.action === "call") setShowCall(true);
+        if (r && r.action === "screen") { setCallScreen(true); setShowCall(true); }
+        if (r && r.action === "vision") setShowVision(true);
       } catch {}
     };
     const onVis = () => { if (!document.hidden) check(); };

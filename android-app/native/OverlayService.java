@@ -47,6 +47,7 @@ public class OverlayService extends Service {
   private static final String API = "https://myralis-ai.vercel.app/api/voice";
 
   private final Handler handler = new Handler(Looper.getMainLooper());
+  private final Runnable fadeBubble = () -> { if (bubble != null) bubble.setAlpha(0.35f); };
   private final List<JSONObject> history = new ArrayList<>();
   private WindowManager wm;
   private TextView bubble;
@@ -124,6 +125,8 @@ public class OverlayService extends Service {
           startX = bubbleLp.x; startY = bubbleLp.y;
           touchX = e.getRawX(); touchY = e.getRawY();
           moved = false; longPressed = false;
+          bubble.setAlpha(1f);
+          handler.removeCallbacks(fadeBubble);
           handler.postDelayed(longPressRun, 500);
           return true;
         }
@@ -143,6 +146,7 @@ public class OverlayService extends Service {
         }
         case MotionEvent.ACTION_UP: {
           handler.removeCallbacks(longPressRun);
+          handler.postDelayed(fadeBubble, 2500);
           if (!moved && !longPressed) {
             pendingAction = "";
             togglePanel();
@@ -158,6 +162,7 @@ public class OverlayService extends Service {
 
     wm.addView(bubble, bubbleLp);
     handler.postDelayed(watchdog, 2000);
+    handler.postDelayed(fadeBubble, 2500);
     return START_STICKY;
   }
 
@@ -396,6 +401,15 @@ public class OverlayService extends Service {
   private String handleCommand(String raw) {
     try {
       String t = raw.trim().toLowerCase(Locale.US);
+      String tc = t.replaceAll("[^a-z ]", "").trim();
+      if (t.contains("live screen") || t.contains("live vision") || tc.equals("call myralis") || tc.equals("call my ralis") || tc.equals("call my assistant")) {
+        String action = t.contains("live screen") ? "screen" : (t.contains("live vision") ? "vision" : "call");
+        pendingAction = action;
+        openMyralis();
+        if (action.equals("screen")) return "Opening Live screen in Myralis.";
+        if (action.equals("vision")) return "Opening Live vision in Myralis.";
+        return "Starting a call in Myralis.";
+      }
       java.util.regex.Matcher m;
 
       m = java.util.regex.Pattern.compile("^(?:set (?:an? )?alarm|wake me)(?: up)? (?:for|at) (\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?$").matcher(t);
