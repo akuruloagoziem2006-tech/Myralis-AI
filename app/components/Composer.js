@@ -1,5 +1,7 @@
 "use client";
 
+import { IconWave } from "./Icons";
+
 export default function Composer(props) {
   const { pendingAction, setPendingAction, setMessages, showPlus, setShowPlus, fileInputRef, setShowVision, setShowCall, setCallScreen, input, setInput, handleImage, image, c, isOnline, useLocal, listening, speaking, stopSpeaking, startListening, sendMessage, loading, styles } = props;
   return (
@@ -51,7 +53,7 @@ export default function Composer(props) {
               >
                 {speaking ? "⏹" : listening ? "●" : "🎙"}
               </button>
-              <button onClick={() => { setCallScreen(false); setShowCall(true); }} title="Call Myralis" style={{ width: 36, height: 36, borderRadius: 999, border: "none", background: "transparent", color: c.text, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>📞</button>
+              <button onClick={() => { setCallScreen(false); setShowCall(true); }} title="Call Myralis" style={{ width: 40, height: 40, borderRadius: 999, border: "none", background: "#111113", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><IconWave /></button>
               <button
                 onClick={sendMessage}
                 disabled={loading || (!input.trim() && !image)}

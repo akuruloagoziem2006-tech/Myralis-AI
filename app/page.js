@@ -437,13 +437,15 @@ export default function Home() {
   }
 
   function saveEdit(index) {
-    const updated = [...messages];
-    updated[index].content = editText;
-    setMessages(updated);
+    const text = (editText || "").trim();
+    if (!text) return;
+    const edited = { ...messages[index], content: text };
+    const next = [...messages.slice(0, index), edited];
+    setMessages(next);
     setEditingIndex(null);
     setEditText("");
+    setTimeout(() => sendMessageWithText(text, next), 100);
   }
-
   function regenerate(index) {
     if (index === 0) return;
     const userMsg = messages[index - 1];

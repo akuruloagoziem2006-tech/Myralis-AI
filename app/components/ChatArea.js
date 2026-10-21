@@ -1,5 +1,7 @@
 "use client";
 
+import { IconPencil, IconCopy, IconShare, IconUp, IconDown, IconSpeaker, IconRegen } from "./Icons";
+
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -81,17 +83,17 @@ export default function ChatArea(props) {
                   }}>
                     {msg.role === "user" ? (
                       <>
-                        <button onClick={() => startEdit(i, msg.content)} style={styles.actionBtn} title="Edit">✏️</button>
-                        <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy">📋</button>
+                        <button onClick={() => startEdit(i, msg.content)} style={styles.actionBtn} title="Edit"><IconPencil /></button>
+                        <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy"><IconCopy /></button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy">📋</button>
-                        <button onClick={() => shareText(msg.content)} style={styles.actionBtn} title="Share">🔗</button>
-                        <button onClick={() => toggleLike(i, "like")} style={{ ...styles.actionBtn, color: liked[i] === "like" ? "#4ade80" : undefined }}>👍</button>
-                        <button onClick={() => toggleLike(i, "unlike")} style={{ ...styles.actionBtn, color: liked[i] === "unlike" ? "#f87171" : undefined }}>👎</button>
-                        <button onClick={() => speak(msg.content)} style={styles.actionBtn}>🔊</button>
-                        <button onClick={() => regenerate(i)} style={styles.actionBtn} title="Regenerate">🔄</button>
+                        <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy"><IconCopy /></button>
+                        <button onClick={() => shareText(msg.content)} style={styles.actionBtn} title="Share"><IconShare /></button>
+                        <button onClick={() => toggleLike(i, "like")} style={{ ...styles.actionBtn, color: liked[i] === "like" ? "#4ade80" : undefined }}><IconUp /></button>
+                        <button onClick={() => toggleLike(i, "unlike")} style={{ ...styles.actionBtn, color: liked[i] === "unlike" ? "#f87171" : undefined }}><IconDown /></button>
+                        <button onClick={() => speak(msg.content)} style={styles.actionBtn}><IconSpeaker /></button>
+                        <button onClick={() => regenerate(i)} style={styles.actionBtn} title="Regenerate"><IconRegen /></button>
                       </>
                     )}
                   </div>
