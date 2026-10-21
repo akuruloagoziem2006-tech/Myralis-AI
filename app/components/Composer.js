@@ -32,7 +32,7 @@ export default function Composer(props) {
           <div style={{ background: c.inputBg, border: "1px solid " + c.border, borderRadius: 26, padding: "10px 12px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.12)", maxWidth: 760, margin: "0 auto 12px", width: "calc(100% - 24px)", boxSizing: "border-box", color: c.text }}>
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImage} hidden />
             <textarea
-              data-composer="1"
+              data-composer="1" onFocus={() => setTimeout(() => document.querySelector('[data-composer]')?.scrollIntoView({ block: "nearest" }), 300)}
               rows={1}
               enterKeyHint="enter"
               style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", color: c.text, fontSize: 16, lineHeight: 1.4, fontFamily: "inherit", padding: "6px 6px 8px", maxHeight: 160, overflowY: "auto", boxSizing: "border-box", display: "block" }}
