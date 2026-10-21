@@ -468,6 +468,13 @@ public class MyralisDevicePlugin extends Plugin {
         android.view.Window w = getActivity().getWindow();
         if (android.os.Build.VERSION.SDK_INT >= 30) {
           w.setDecorFitsSystemWindows(false);
+          w.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+          final android.view.View content = getActivity().findViewById(android.R.id.content);
+          w.getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+            int ime = insets.getInsets(android.view.WindowInsets.Type.ime()).bottom;
+            if (content != null) content.setPadding(0, 0, 0, ime);
+            return insets;
+          });
           android.view.WindowInsetsController ic = w.getInsetsController();
           if (ic != null) {
             ic.hide(android.view.WindowInsets.Type.statusBars() | android.view.WindowInsets.Type.navigationBars());
