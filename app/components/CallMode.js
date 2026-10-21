@@ -199,7 +199,7 @@ export default function CallMode({ onClose, onTurn, memory, screen }) {
       text = String(text || "").trim();
       if (!text) {
         emptyRounds.current += 1;
-        if (emptyRounds.current >= 5) { mutedRef.current = true; setMuted(true); }
+        if (emptyRounds.current >= 5) { emptyRounds.current = 0; }
         await sleep(300);
         continue;
       }
