@@ -47,7 +47,11 @@ public class OverlayService extends Service {
   private static final String API = "https://myralis-ai.vercel.app/api/voice";
 
   private final Handler handler = new Handler(Looper.getMainLooper());
-  private final Runnable fadeBubble = () -> { if (bubble != null) bubble.setAlpha(0.35f); };
+  private final Runnable fadeBubble = new Runnable() {
+    @Override public void run() {
+      if (OverlayService.this.bubble != null) OverlayService.this.bubble.setAlpha(0.35f);
+    }
+  };
   private final List<JSONObject> history = new ArrayList<>();
   private WindowManager wm;
   private TextView bubble;
