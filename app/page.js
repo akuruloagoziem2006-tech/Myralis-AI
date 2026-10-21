@@ -748,6 +748,21 @@ To use Local AI:
 
 
 const styles = {
+  callBtn: {
+    border: "none",
+    background: "#1c1c1e",
+    color: "#fff",
+    borderRadius: 999,
+    padding: "10px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    cursor: "pointer",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
+  },
+
   menuOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex" },
   menuDrawer: { boxSizing: "border-box", width: "min(340px, 88vw)", height: "100%", background: "#0c0c0e", color: "#f4f4f5", display: "flex", flexDirection: "column", padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 8px)", boxShadow: "8px 0 30px rgba(0,0,0,0.35)", overflowY: "auto" },
   menuProfile: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 8px 16px" },
@@ -1209,7 +1224,7 @@ const styles = {
   actions: {
     display: "flex",
     gap: 2,
-    marginTop: 6,
+    marginTop: 8,
     marginBottom: 4,
     flexWrap: "wrap",
     alignItems: "center"
@@ -1217,12 +1232,13 @@ const styles = {
   actionBtn: {
     border: "none",
     background: "transparent",
-    color: "#71717a",
-    fontSize: 16,
+    color: "#8e8e93",
+    fontSize: 17,
     cursor: "pointer",
     padding: "8px 10px",
-    borderRadius: 10,
-    lineHeight: 1
+    borderRadius: 8,
+    lineHeight: 1,
+    opacity: 0.85
   },
   editArea: {
     width: "100%",
