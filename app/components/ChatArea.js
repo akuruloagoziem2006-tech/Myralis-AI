@@ -90,8 +90,8 @@ export default function ChatArea(props) {
                       <>
                         <button onClick={() => copyText(msg.content)} style={styles.actionBtn} title="Copy"><IconCopy /></button>
                         <button onClick={() => shareText(msg.content)} style={styles.actionBtn} title="Share"><IconShare /></button>
-                        <button onClick={() => toggleLike(i, "like")} style={{ ...styles.actionBtn, color: liked[i] === "like" ? "#4ade80" : undefined }}><IconUp /></button>
-                        <button onClick={() => toggleLike(i, "unlike")} style={{ ...styles.actionBtn, color: liked[i] === "unlike" ? "#f87171" : undefined }}><IconDown /></button>
+                        <button onClick={() => toggleLike(i, "like")} style={{ ...styles.actionBtn, opacity: 1, borderRadius: 999, background: liked[i] === "like" ? "rgba(21,128,61,0.14)" : "transparent", color: liked[i] === "like" ? "#15803d" : c.text }}><IconUp /></button>
+                        <button onClick={() => toggleLike(i, "unlike")} style={{ ...styles.actionBtn, opacity: 1, borderRadius: 999, background: liked[i] === "unlike" ? "rgba(185,28,28,0.14)" : "transparent", color: liked[i] === "unlike" ? "#b91c1c" : c.text }}><IconDown /></button>
                         <button onClick={() => speak(msg.content)} style={styles.actionBtn}><IconSpeaker /></button>
                         <button onClick={() => regenerate(i)} style={styles.actionBtn} title="Regenerate"><IconRegen /></button>
                       </>
