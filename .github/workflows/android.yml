@@ -74,6 +74,13 @@ jobs:
           PY
           grep -n "registerPlugin" android/app/src/main/java/com/myralis/app/MainActivity.java
           grep -n "<service\|<activity\|BIND_ACCESSIBILITY" android/app/src/main/AndroidManifest.xml
+      - name: App icon
+        working-directory: android-app
+        run: |
+          mkdir -p android/app/src/main/res/drawable android/app/src/main/res/mipmap-anydpi-v26
+          cp native/icon/myralis_icon_background.xml native/icon/myralis_icon_foreground.xml android/app/src/main/res/drawable/
+          cp native/icon/ic_launcher.xml native/icon/ic_launcher_round.xml android/app/src/main/res/mipmap-anydpi-v26/
+          ls android/app/src/main/res/mipmap-anydpi-v26/
       - name: Build debug APK
         working-directory: android-app/android
         run: |
